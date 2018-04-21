@@ -1,0 +1,153 @@
+fmod ASSEMBLY-CONFIGURATION is
+	protecting INT .
+	
+	***( Defino el banco de registros. Cada registro es un par de un nombre de registro junto con el valor
+	del registro, que es un numero entero, positivo o negativo )
+	sorts Bank Register RegName .
+	subsort Register < Bank .
+	ops R0 R1 R2 R3 R4 R5 R6 R7 : -> RegName .
+	op <_,_> : RegName Int -> Register [ctor] .
+
+	*** Banco vacio y banco inicial, con todos los registros guardando un cero
+	op BankEmpty : -> Bank [ctor] .
+	op BankInit : -> Bank [ctor] .
+	eq BankInit = < R0, 0 > < R1, 0 > < R2, 0 > < R3, 0 > < R4, 0 > < R5, 0 > < R6, 0 > < R7, 0 > .
+	op __ : Bank Bank -> Bank [ctor comm assoc id: BankEmpty] .
+
+	*** Cambio del contenido de un registro, no se pueden añadir registros
+	var R : RegName .
+	vars n n' n'' : Int .
+	var b : Bank .
+	op _[_/_] : Bank RegName Int -> Bank .
+	eq (b < R , n >) [R / n'] = b < R , n' > .
+
+	*** Acceso al numero que guarda un registro mediante su nombre de registro
+	op _[_] : Bank RegName -> Int [prec 31] .
+	eq (b < R , n >) [R] = n .
+	
+
+
+
+	***( Defino la memoria, que es un par de una direccion (un numero natural) y un contenido, que es 
+	un numero entero, positivo o negativo )
+	sorts Memory MemLoc .
+	op <_,_> : Nat Int -> MemLoc [ctor] .
+	
+	*** La memoria vacia sirve como elemento unidad y como inicializador
+	op MemEmpty : -> Memory [ctor] .
+
+	*** Los elementos de memoria simplemente estan unos al lado de los otros
+	subsort MemLoc < Memory .
+	op __ : Memory Memory -> Memory [ctor assoc comm id: MemEmpty] .
+
+	var M : Memory .
+	vars d d' : Nat .
+	vars f f' : Int .
+	
+	*** Operador para añadir elementos en memoria o modificar los que ya existen
+	op _[_/_] : Memory Nat Int -> Memory [ctor] .
+	eq (M < d, f >) [d / f'] = M < d, f' > .
+	eq M [d / f] = M < d, f > [owise] .
+
+	*** Acceso al contenido de un elemento de la memoria
+	op _[_] : Memory Nat ~> Int [prec 31] .
+	eq (M < d , f >) [d] = f .
+
+
+
+	
+	***( Tenemos ahora dos registros mas. Uno es indicador de negativo, que guarda un uno si el numero 
+	con el que se trabaja es negativo, un cero si no. El indicador de cero guarda un uno si el numero
+	es cero, guarda un cero si no. Son de tipo Nat. Ademas defino operadores que hacen estos casos ) 
+	op isneg(_) : Int -> Nat [ctor] .
+	ceq isneg(n) = 1 if n < 0 .
+	ceq isneg(n) = 0 if n >= 0 .
+
+	op iszero(_) : Int -> Nat [ctor] .
+	ceq iszero(n) = 1 if n = 0 .
+	ceq iszero(n) = 0 if n =/= 0 . 
+
+	
+
+
+	***( Cada instruccion del programa tiene un numero asociado que es la linea en la que esta. El contador
+	de programa guarda la direccion de la instruccion que se esta ejecutando )
+	*** La ejecucion comienza con este registro a cero
+
+
+
+
+	***( Defino un estado, en general, como un conjunto de los ocho banco de registros, memoria, 
+	indicador de negativo y de cero y contador de programa )
+	sort State .
+	op [_;_;_;_;_] : Bank Memory Nat Nat Nat -> State [ctor] .
+	op StateInit : -> State [ctor] .
+	eq StateInit = [ BankInit ; MemEmpty ; 0 ; 0 ; 0 ] .
+
+
+
+
+	*** Operadores para acceder a los indicadores y al contador de programa, dado un estado
+	vars x y C : Nat .
+
+	op indn_ : State -> Nat .
+	eq indn [ b ; M ; x ; y ; C ]  = x .
+
+	op indz_ : State -> Nat .
+	eq indz [ b ; M ; x ; y ; C ]  = y .
+
+	op count_ : State -> Nat .
+	eq count [ b ; M ; x ; y ; C ]  = C .
+
+	
+	
+
+	***( De la misma manera se definen operadores para acceder al banco de registros y a la memoria
+	dado un estado )
+	op bank_ : State -> Bank [ctor] .
+	eq bank [ b ; M ; x ; y ; C ]  = b .
+	
+	op memory_ : State -> Memory [ctor] .
+	eq memory [ b ; M ; x ; y ; C ]  = M .
+	
+endfm
+
+fmod ASSEMBLY-SYNTAX is
+	protecting ASSEMBLY-CONFIGURATION .
+
+	*** Defino las instrucciones que estan permitidas en un programa
+	***( Defino un statement, que es un par de un numero, llamado la direccion de la instruccion,
+	y despues una instruccion, que es el contenido del statement. Un programa va a ser una lista de
+	estos statements, uno tras otro )
+	
+
+	sort Inst Stm Prog .
+	subsort Stm < Prog .
+	op {_;_} : Nat Inst -> Stm [ctor] .
+	op ProgEmpty : -> Prog [ctor] .
+	op __ : Prog Prog -> Prog [ctor assoc id: ProgEmpty] .
+	
+	
+
+	
+	*** Instrucciones aritmeticas	
+	op ADD __,_ : RegName RegName RegName -> Inst [ctor] .
+	op SUB __,_ : RegName RegName RegName -> Inst [ctor] .
+	op AND __,_ : RegName RegName RegName -> Inst [ctor] .
+	op ADDI __,_ : RegName Nat RegName -> Inst [ctor] .
+	op SUBI __,_ : RegName Nat RegName -> Inst [ctor] .
+	
+	*** Instrucciones de intercambio registro memoria
+	op LOAD _(_),_ : Nat RegName RegName -> Inst [ctor] .
+	op STORE _,_(_) : RegName Nat RegName -> Inst [ctor] .
+
+	*** Instrucciones de salto
+	op BL_ : Nat -> Inst [ctor] .
+	op BG_ : Nat -> Inst [ctor] .
+	op BEQ_ : Nat -> Inst [ctor] .
+	op BNE_ : Nat -> Inst [ctor] .
+	op BLE_ : Nat -> Inst [ctor] .
+	op BGE_ : Nat -> Inst [ctor] .
+	op BR_ : Nat -> Inst [ctor] .
+	
+endfm
