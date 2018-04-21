@@ -1,0 +1,96 @@
+load lang_syntax.maude .
+
+mod LANG-SEMANTICS is
+	protecting LANG-SYNTAX .
+	protecting MEMORY .
+
+	***( En el modulo de semantica especificamos como se reescriben los estados. ) 
+
+	***( Los tipos que definimos ahora son a los que evalúa un programa, una expresion
+	booleana, o una expresion aritmetica. )
+	
+	sorts Eval EvalB EvalA .
+	subsort Nat < EvalA .
+	subsort Bexp < EvalB .
+	op <_,_> : Prog Memory -> Eval [ctor] .
+	op <_,_> : Aexp Memory -> EvalA [ctor] .
+	op <_,_> : Bexp Memory -> EvalB [ctor] .
+
+	vars N M : Nat .
+	vars b b' : Bexp .
+	vars sigma sigma' sigma'' : Memory .
+	vars v v' : Var .
+	vars A B : Aexp .
+	vars P P' : Prog .
+
+	*** La evaluacion de un numero en cierto estado de la memoria, es el propio numero 
+	rl [numbers] :  < N, sigma > => N .
+
+	***( La evaluacion de una variable en cierto estado de la memoria es el valor
+	asociado a la variable en ese estado )
+	rl [variables] : < v, sigma > => sigma [v] .
+
+	*** Evaluar expresiones artimeticas 
+	crl [ASum] : < A +. B, sigma > => N + M
+		if < A, sigma > => N /\ < B, sigma > => M .
+
+	crl [AProd] : < A *. B, sigma > => N * M 
+		if < A, sigma > => N /\ < B, sigma > => M .
+
+	*** Evaluar expresiones booleanas 
+	rl [true] : < T, sigma > => T .
+	rl [false] : < F, sigma > => F .
+
+	crl [Bequal] : < A B= B, sigma > => < T, sigma >
+		if < A, sigma > => N /\ < B, sigma > => N .
+	crl [Bequal] : < A B= B, sigma > => < F, sigma >
+		if < A, sigma > => N /\  < B, sigma > => M /\ N =/= M  .
+
+	crl [Blesser] : < A B<= B, sigma > => < T, sigma >
+		if < A, sigma > => N  /\  < B, sigma > => M /\ N <= M .
+	crl [Bgreater] : < A B<= B, sigma > => < F, sigma > 
+		if < A, sigma > => N /\ < B, sigma > => M /\ N > M .
+
+	crl [Bnottrue] : < Bnot b, sigma > => < T, sigma >
+		if < b, sigma > => < F, sigma > .
+	crl [Bnotfalse] : < Bnot b, sigma > => < F, sigma >
+		if < b, sigma > => < T, sigma > . 
+
+	crl [Bortrue] : < b Bor b', sigma > => < T, sigma > 
+		if < b, sigma > => < T, sigma > /\ < b', sigma > => < T, sigma > .
+	crl [Bortrue] : < b Bor b', sigma > => < T, sigma > 
+		if < b, sigma > => < T, sigma > /\ < b', sigma > => < F, sigma > .
+	crl [Bortrue] : < b Bor b', sigma > => < T, sigma > 
+		if < b, sigma > => < F, sigma > /\ < b', sigma > => < T, sigma > .
+	crl [Borfalse] : < b Bor b', sigma > => < F, sigma >
+		if < b, sigma > => < F, sigma > /\ < b', sigma > => < F, sigma > .
+
+	crl [Bandtrue] : < b Band b', sigma > => < T, sigma >
+		if < b, sigma > => < T, sigma > /\ < b', sigma > => < T, sigma > .
+	crl [Bandfalse] : < b Band b', sigma > => < F, sigma >
+		if < b, sigma > => < F, sigma > /\ < b', sigma > => < T, sigma > .
+	crl [Bandfalse] : < b Band b', sigma > => < F, sigma >
+		if < b, sigma > => < T, sigma > /\ < b', sigma > => < F, sigma > .
+	crl [Bandfalse] : < b Band b', sigma > => < F, sigma >
+		if < b, sigma > => < F, sigma > /\ < b', sigma > => < F, sigma > .
+
+	*** Evaluar programas
+	crl [assig] : < v := A, sigma > => < skip, sigma[v / N] >
+		if < A, sigma > => N .
+
+	crl [comp] : < P ; P', sigma > => < skip, sigma' >
+		if < P, sigma > => < skip, sigma'' > /\
+		   < P', sigma'' > => < skip, sigma' > .
+
+	crl [iftrue] : < if b then P else P', sigma > => < P, sigma >
+		if < b, sigma > => < T, sigma > .
+	crl [iffalse] : < if b then P else P', sigma > => < P', sigma >
+		if < b, sigma > => < F, sigma > .
+
+	crl [whiletrue] : < while b do P, sigma > => < skip, sigma' >
+		if < b, sigma > => < T, sigma > /\
+		   < P ; while b do P, sigma > => < skip, sigma' > .
+	crl [whilefalse] : < while b do P, sigma > => < skip, sigma >
+		if < b, sigma > => < F, sigma > .
+
+endm
