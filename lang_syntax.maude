@@ -1,0 +1,63 @@
+fmod VAR is
+	protecting QID .
+
+	sort Var .
+	subsort Qid < Var .
+
+	ops x y z : -> Var [ctor] .
+endfm
+
+fmod MEMORY is
+	protecting VAR .
+
+	sort MemoryCell Memory .
+	subsort MemoryCell < Memory .
+
+	op <_,_> : Var Nat -> MemoryCell [ctor] .
+
+	op mt : -> Memory [ctor] .
+	op __ : Memory Memory -> Memory [ctor comm assoc id: mt] .
+
+	var M : Memory .
+	vars V V' : Var .
+	vars N N' : Nat .
+
+	op _[_/_] : Memory Var Nat -> Memory .
+	eq (M < V, N >) [V / N'] = M < V, N' > .
+	eq M [V / N] = M < V, N > [owise] .
+
+	op _[_] : Memory Var ~> Nat .
+	eq (M < V, N >) [V] = N .
+endfm
+
+
+fmod LANG-SYNTAX is
+	protecting VAR .
+
+	sorts Aexp Bexp Prog .
+
+	*** Sintaxis de expresiones booleanas
+	ops T F : -> Bexp [ctor] .
+	op _B=_ : Aexp Aexp -> Bexp [comm] .
+	op _B<=_ : Aexp Aexp -> Bexp .
+	op Bnot_ : Bexp -> Bexp .
+	op _Band_ : Bexp Bexp -> Bexp [comm] .
+	op _Bor_ : Bexp Bexp -> Bexp [comm] .
+
+	*** Sintaxis de expresiones aritmeticas
+	subsort Var < Aexp .
+	subsort Nat < Aexp .
+	op _+._ : Aexp Aexp -> Aexp [comm prec 28] .
+	op _*._ : Aexp Aexp -> Aexp [comm prec 29] .
+
+	*** Sintaxis de los programas permitidos
+	op skip : -> Prog [ctor] .
+	op _:=_ : Var Aexp -> Prog [ctor prec 30] .
+	op _;_ : Prog Prog -> Prog [ctor assoc] .
+	op if_then_else_ : Bexp Prog Prog -> Prog [ctor] .
+	op while_do_ : Bexp Prog -> Prog [ctor] .
+
+endfm
+
+
+
