@@ -1,0 +1,3 @@
+load grep_semantics.maude .
+
+rew search { "h" r. "o" } in { "ho" } .

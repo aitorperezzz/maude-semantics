@@ -1,0 +1,47 @@
+load grep_syntax.maude .
+
+mod GREP-SEMANTICS is
+
+	protecting GREP-SYNTAX .
+	
+	vars A B C : RegExp .
+	vars a b c : Char .
+	vars v v' w w' : String .
+	vars i l l' : Int .
+ 
+
+	rl [epsilon] : search { Epsilon } in { "" } => true .
+	crl [epsilonfalse] : search { Epsilon } in { w } => false
+		if w =/= "" .
+
+	rl [stringtrue] : search { w } in { w } => true .
+	crl [stringfalse] :  search { w } in { w' } => false
+		if w =/= w' .
+
+	rl [onechartrue] : search { a } in { a } => true .
+	crl [onecharfalse] : search { a } in { w } => false
+		if w =/= a .
+				
+
+	*** Reglas de los operadores
+	crl [sumfirsttrue] : search { A r+ B } in { w } => true
+		if search { A } in { w } => true .  
+	crl [sumsecondtrue] : search { A r+ B } in { w } => true
+		if search { B } in { w } => true .
+	crl [sumbothfalse] : search { A r+ B } in { w } => false
+		if search { A } in { w } => false /\ search { B } in { w } => false  .  
+
+
+	crl [starifempty] : search { A r* } in { w } => true
+		if w == "" .
+	crl [starstring] : search { A r* } in { w } => true
+		if search { A } in { w } => true .
+	crl [starnormal] : search { A r* } in { substr(w, 0, l) + substr(w, l, l') } => true
+		if search { A } in { substr(w, 0, l) } => true /\ search { A r* } in { substr(w, l, l') } => true /\ l =/= 0 /\ l + l' == length(w)  .
+
+
+	crl [concattrue] : search { A r. B } in { substr(w, 0, l) + substr(w, l, length(w) - l) } => true
+		if search { A } in { substr(w, 0, l) } => true /\ search { B } in { substr(w, l, length(w) - l) } => true .
+ 
+
+endm

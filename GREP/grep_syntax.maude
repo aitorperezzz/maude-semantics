@@ -1,0 +1,43 @@
+fmod GREP-SYNTAX is
+
+	protecting INT .
+	protecting BOOL .
+	protecting STRING .
+
+	*** Tengo que buscar si algo, dado en forma de expresion regular, se encuentra en un texto,
+	*** que no es mas que un tipo String predefinido
+	sort RegExp .
+
+	*** Una string es una expresion regular, y un solo caracter tambien
+	subsort String < RegExp .
+	
+	
+	*** Defino la cadena vacia, que no contiene ningun simbolo. Es una string tambien
+	op Epsilon : -> String [ctor] .
+
+
+	*** Sintaxis de expresiones regulares a partir de otras
+
+	*** El operador de suma de expresiones regulares indica que aceptamos como expresion regular
+	*** una expresion regular seguida de r+ seguida de otra expresion regular
+	op _r+_ : RegExp RegExp -> RegExp [ctor prec 27] .
+
+	*** Operador concatenacion, aceptamos cadenas formadas con la expresion regular de la izquierda,
+	*** el simbolo r. y otra expresion regular a la dereha
+	op _r._ :  RegExp RegExp -> RegExp [ctor prec 26] .
+
+	*** Clausura de Kleene. Aceptamos cadenas que sean un numero indeterminado de repeticiones
+	*** de cadenas permitidas por la expresion regular de lo que la acompaña por la izquierda
+	op _r* : RegExp -> RegExp [ctor prec 25] .
+
+
+
+	*** Especificamos como se pide la ejecucion de un comando en este lenguaje:
+	*** Se busca una expresion regular en un texto, que es una String
+	sort Eval .
+	op search {_} in {_} : RegExp String -> Eval .
+
+	*** El resultado de la ejecucion es true or false, en funcion de si se encuentra o no
+	subsort Bool < Eval .
+
+endfm
