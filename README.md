@@ -1,2 +1,4 @@
 # IMP
-Specification of the syntax and semantics of a simple IMP language, in Maude
+Specification of semantics of various programming languages, written in Maude.
+
+IMP, Assembly, grep Unix command, IMPP.
