@@ -42,4 +42,4 @@ Las instrucciones pueden ser de varios tipos:
 para poder usar un operación aritmética sobre él. `STORE` permite guardar un dato procedente de un registro, en una posición de la
 memoria.
 * Condiciones de salto. Si se cumplen ciertas condiciones, es posible alterar el sentido natural del contador de programa, y pasar a determinada línea de instrucción.
-
+        
