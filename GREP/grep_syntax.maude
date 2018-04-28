@@ -1,43 +1,66 @@
 fmod GREP-SYNTAX is
 
-	protecting INT .
-	protecting BOOL .
 	protecting STRING .
 
-	*** Tengo que buscar si algo, dado en forma de expresion regular, se encuentra en un texto,
-	*** que no es mas que un tipo String predefinido
+	*** This grep-like command will search if certain string matches an element of the language specified by
+	*** a regular expression. Strings (and characters) are regular expressions by themselves
 	sort RegExp .
-
-	*** Una string es una expresion regular, y un solo caracter tambien
 	subsort String < RegExp .
 	
 	
-	*** Defino la cadena vacia, que no contiene ningun simbolo. Es una string tambien
-	op Epsilon : -> String [ctor] .
+	*** Epsilon is a regular expression, and will match the empty string
+	op Epsilon : -> RegExp [ctor] .
 
 
-	*** Sintaxis de expresiones regulares a partir de otras
+	*** Syntax of regular expressions
 
-	*** El operador de suma de expresiones regulares indica que aceptamos como expresion regular
-	*** una expresion regular seguida de r+ seguida de otra expresion regular
-	op _r+_ : RegExp RegExp -> RegExp [ctor prec 27] .
+	*** SUM operator
+	op _r+_ : RegExp RegExp -> RegExp [ctor assoc comm prec 27] .
 
-	*** Operador concatenacion, aceptamos cadenas formadas con la expresion regular de la izquierda,
-	*** el simbolo r. y otra expresion regular a la dereha
-	op _r._ :  RegExp RegExp -> RegExp [ctor prec 26] .
+	*** CONCATENATION operator
+	op _r._ :  RegExp RegExp -> RegExp [ctor assoc prec 26] .
 
-	*** Clausura de Kleene. Aceptamos cadenas que sean un numero indeterminado de repeticiones
-	*** de cadenas permitidas por la expresion regular de lo que la acompaña por la izquierda
+	*** STAR, or Kleene star
 	op _r* : RegExp -> RegExp [ctor prec 25] .
 
 
+	*** A Prog will recieve a regular expression and a string where is has to find matches
+	sort Prog .
+	op search {_} in {_} : RegExp String -> Prog .
 
-	*** Especificamos como se pide la ejecucion de un comando en este lenguaje:
-	*** Se busca una expresion regular en un texto, que es una String
-	sort Eval .
-	op search {_} in {_} : RegExp String -> Eval .
+endfm
 
-	*** El resultado de la ejecucion es true or false, en funcion de si se encuentra o no
-	subsort Bool < Eval .
+fmod GREP-UTILS is
+
+	protecting NAT .
+	protecting STRING .
+
+	
+	sorts Sep SepList .
+	subsort Sep < SepList .
+	op EmptySep : -> Sep [ctor] .
+	op {_,_} : String String -> Sep [ctor] .
+	op __ : SepList SepList -> SepList [ctor assoc id: EmptySep] .
+
+	
+	*** firstnumber accepts a number l and a string, and returns the division of the string where
+	*** the first element hast length l
+	op firstnumber(_,_) : Nat String -> SepList [ctor] .
+	var w : String .
+	var l : Nat .
+	ceq firstnumber( l, w ) = { substr( w, 0, l ) , substr( w, l, sd( length(w), l ) ) } firstnumber( s(l), w ) 
+		if l < length(w) .
+	ceq firstnumber( l, w ) = { w, "" } if l == length(w) . 
+
+	*** frontsplit gives all the possible splits of a string, without the possibility of
+	*** ( "", string )
+	op frontsplit_ : String -> SepList [ctor] .
+	eq frontsplit w = firstnumber( 1, w ) .
+
+	*** The operator split is the same as frontsplit except it adds at the front the possibility of
+	*** ( "", string )
+	op split_ : String -> SepList [ctor] .
+	eq split w = { "", w } frontsplit w .
+
 
 endfm

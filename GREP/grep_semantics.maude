@@ -3,45 +3,87 @@ load grep_syntax.maude .
 mod GREP-SEMANTICS is
 
 	protecting GREP-SYNTAX .
+	protecting GREP-UTILS .
 	
 	vars A B C : RegExp .
-	vars a b c : Char .
-	vars v v' w w' : String .
-	vars i l l' : Int .
- 
+	var a : Char .
+	vars w w' : String .
+	vars x y : String .
+	vars S S' : SepList .
+	
 
-	rl [epsilon] : search { Epsilon } in { "" } => true .
-	crl [epsilonfalse] : search { Epsilon } in { w } => false
+	*** Some operators do not need the splitting of the string to work. Concatenation needs the 
+	*** split, and Kleene star needs the frontsplit. We design an operator called askfor, which
+	*** will transform to a split when concatenation and to a frontsplit when Kleene star
+	*** We will say that an evaluation is a Prog and a SepList. This will ultimately give true or 
+	*** false.
+	sort Eval .
+	subsort Bool < Eval .
+	op <_,_> : Prog SepList -> Eval .
+
+	op askfor : -> SepList [ctor] .
+
+	rl [givessplit] : < search { A r. B } in { w } , askfor > => 
+		< search { A r. B } in { w } , split w > .
+	rl [givesfrontsplit] : < search { A r* } in { w } , askfor > => 
+		< search { A r* } in { w } , frontsplit w > .
+	
+
+	*** Rules for characters, strings and the empty string
+	
+	rl [epsilontrue] : < search { Epsilon } in { "" } , S > => true .
+	crl [epsilonfalse] : < search { Epsilon } in { w } , S > => false
 		if w =/= "" .
 
-	rl [stringtrue] : search { w } in { w } => true .
-	crl [stringfalse] :  search { w } in { w' } => false
+	rl [stringtrue] : < search { w } in { w } , S > => true .
+	crl [stringfalse] : < search { w } in { w' } , S > => false
 		if w =/= w' .
 
-	rl [onechartrue] : search { a } in { a } => true .
-	crl [onecharfalse] : search { a } in { w } => false
+	rl [onechartrue] : < search { a } in { a } , S > => true .
+	crl [onecharfalse] : < search { a } in { w } , S > => false
 		if w =/= a .
 				
 
-	*** Reglas de los operadores
-	crl [sumfirsttrue] : search { A r+ B } in { w } => true
-		if search { A } in { w } => true .  
-	crl [sumsecondtrue] : search { A r+ B } in { w } => true
-		if search { B } in { w } => true .
-	crl [sumbothfalse] : search { A r+ B } in { w } => false
-		if search { A } in { w } => false /\ search { B } in { w } => false  .  
+
+	*** Rules for the three operators
+	
+	*** SUM operator. It is true if the right or the left side matches
+	*** It is false when none of the sides match
+	crl [sumfirsttrue] : < search { A r+ B } in { w } , S > => true
+		if < search { A } in { w } , askfor > => true .  
+	crl [sumsecondtrue] : < search { A r+ B } in { w } , S > => true
+		if < search { B } in { w } , askfor > => true .
+	crl [sumfalse] : < search { A r+ B } in { w } , S > => false
+		if < search { A } in { w } , askfor > => false /\ < search { B } in { w } , askfor > => false  .  
 
 
-	crl [starifempty] : search { A r* } in { w } => true
+	*** STAR operator, it is true if the string is the empty string, if the string matches the regular expression
+	*** itself, or if some splitting has the first side match the regular expression, and the second hand match
+	*** the star again. 
+	crl [starifempty] : < search { A r* } in { w } , S > => true
 		if w == "" .
-	crl [starstring] : search { A r* } in { w } => true
-		if search { A } in { w } => true .
-	crl [starnormal] : search { A r* } in { substr(w, 0, l) + substr(w, l, l') } => true
-		if search { A } in { substr(w, 0, l) } => true /\ search { A r* } in { substr(w, l, l') } => true /\ l =/= 0 /\ l + l' == length(w)  .
+	crl [starstring] : < search { A r* } in { w } , S > => true
+		if < search { A } in { w } , askfor > => true .
+	crl [starnormal] : < search { A r* } in { w } , S { x, y } S' > => true
+		if < search { A } in { x } , askfor > => true /\ 
+		< search { A r* } in { y } , askfor > => true .
+
+	*** Star operator is false whenever the regular expression in front of it isn't found in the string
+	crl [starfalse] : < search { A r* } in { w } , S > => false
+		if < search { A } in { w } , askfor > => false .
 
 
-	crl [concattrue] : search { A r. B } in { substr(w, 0, l) + substr(w, l, length(w) - l) } => true
-		if search { A } in { substr(w, 0, l) } => true /\ search { B } in { substr(w, l, length(w) - l) } => true .
+	*** CONCATENATION. We previously give it the split on the right hand side
+	*** It is true if we find a splitting that matches. It is false whenever we cannot find any of the parts
+	*** in our string	
+	crl [concattrue] : < search { A r. B } in { w } , S { x, y } S' > => true
+		if < search { A } in { x } , askfor > => true 
+		/\ < search { B } in { y } , askfor > => true .
+	crl [concatfalse] : < search { A r. B } in { w } , S > => false
+		if < search { A } in { w } , S > => false . 
+	crl [concatfalse] : < search { A r. B } in { w } , S > => false
+		if < search { B } in { w } , S > => false .
+	
  
 
 endm
