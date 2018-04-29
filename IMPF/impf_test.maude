@@ -1,0 +1,18 @@
+load impf_semantics.maude .
+
+*** Multiply two numbers calling a function
+
+rew < 
+function 'z = 'multiply ( 'x, 'y ) 
+	'z := 'x *. 'y 
+endfunction 
+	'b := 2 ; 
+	'a := 'multiply ( 10, 'b ) 
+, EmptyMem > . 
+
+*** Multiply ywo numbers the usual way
+
+rew < 
+	'b := 2 ; 
+	'a := 10 *. 'b 
+, EmptyMem > .
