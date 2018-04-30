@@ -1,7 +1,7 @@
 load impf_semantics.maude .
 
 *** Multiply two numbers calling a function
-***( rew < 
+rew < 
 function 'z = 'multiply ( 'x, 'y ) 
 	'z := 'x *. 'y 
 endfunction 
@@ -26,14 +26,27 @@ endfunction
 	'c := 'multiply ( self ) 
 , EmptyMem > . 
 
- )
+
 rew <  
-function 'z = 'factorial ( 'x )  
-	( if ( 'x B<= 1 ) then 
+( function 'z = 'factorial ( 'x )  
+	if ( 'x B= 1 ) then 
 		( 'z := 1 ) 
 	else 
-		( 'z := 'x *. ( 'factorial ( 'x - 1 ) ) ) ) 
-endfunction 
+		( 'z := 'x *. ( 'factorial ( 'x -. 1 ) ) ) 
+endfunction ) 
 	'a := 5 ; 
 	'f := ( 'factorial ( 'a ) ) 	 
 , EmptyMem > .
+
+
+rew <  
+( function 'z = 'primera ( 'x, 'y ) 
+	'z := 'x *. 'segunda ( 'y ) 
+endfunction 
+function 'z = 'segunda ( 'x ) 
+	'z := 'x *. 'x 
+endfunction ) 	
+	'a := 5 ; 
+	'b := 3 ;
+	'f := ( 'primera ( 'a, 'b ) ) 	 
+, EmptyMem > . 
