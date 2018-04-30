@@ -65,23 +65,27 @@ fmod IMPF-SYNTAX is
 	op while_do_ : Bexp Prog -> Prog [ctor] .
 
 
-	*** To specify the syntax of function calls, we first define a list of arguments that a function can
-	*** receive. These can be arithmetic expressions or variables
-	sorts Arg ArgList .
-	subsort Arg < ArgList .
-	subsort Aexp < Arg .
-	subsort Var < Arg .
+	*** To specify the syntax of function calls, we shall allow that, in the definition of the function,
+	*** a list of variables be given. However, when the function is called from the main script, its
+	*** arguments may be replaced by any list of arithmetic expressions, may they be variables, numbers, or
+	*** complex arithmetic expressions
+	sort VarList AexpList .
+	subsort Var < VarList .
+	subsort Aexp < AexpList .
+	subsort VarList < AexpList .
 
-	*** self will denote no arguments needed and no arguments passed
-	op self : -> ArgList [ctor] .
-	op _,_ : ArgList ArgList -> ArgList [ctor assoc id: self] .
+	*** self will denote no arguments needed and no arguments passed. To achieve this, we define it as a
+	*** VarList, and so also as a AexpList
+	op self : -> VarList [ctor] .
+	op _,_ : VarList VarList -> VarList [ctor assoc id: self] .
+	op _,_ : AexpList AexpList -> AexpList [ctor assoc id: self] .
 	
 	*** The name of a function is of type Qid. We specify how to write a function. We can have multiple
 	*** functions back to back and then a list of statements, as before
 	sorts FunName FunBlock FunList .
 	subsort Qid < FunName .
 	subsort FunBlock < FunList .
-	op function _ = _ (_) _ endfunction : Var FunName ArgList Prog -> FunBlock [ctor] .
+	op function _ = _ (_) _ endfunction : Var FunName VarList Prog -> FunBlock [ctor] .
 	op EmptyFunList : -> FunList [ctor] .
 	op __ : FunList FunList -> FunList [ctor assoc id: EmptyFunList] .
 
@@ -94,7 +98,7 @@ fmod IMPF-SYNTAX is
 	
 	*** We can allow to call a function with its name followed by the arguments. The function can only give
 	*** back a number, so a function call will be an arithmetic expression.
-	op _(_) : FunName ArgList -> Aexp [ctor prec 27] .
+	op _(_) : FunName AexpList -> Aexp [ctor prec 27] .
 
 
 endfm
@@ -103,7 +107,8 @@ fmod IMPF-STACK is
 	protecting IMPF-MEMORY .
 	protecting IMPF-SYNTAX .
 	
-	vars vs vs' : ArgList .
+	var vo : AexpList .
+	var vi : VarList .
 	var sigma : Memory .
 	*** o means outer variable, i means inner variable
 	vars xo xi : Var .
@@ -114,9 +119,9 @@ fmod IMPF-STACK is
 	*** memory state and the arguments passed to the function when called
 	*** givestack is recursive on the number of arguments
 
-	op givestack[___] : ArgList ArgList Memory -> Memory [ctor] .
-	eq givestack[ ( xo, vs ) ( xi, vs' ) sigma ] = < xi, sigma[xo] > givestack[ vs vs' sigma ] .
-	eq givestack[ ( N, vs ) ( xi, vs' ) sigma ] = < xi, N > givestack[ vs vs' sigma ] .
+	op givestack[___] : AexpList VarList Memory -> Memory [ctor] .
+	eq givestack[ ( xo, vo ) ( xi, vi ) sigma ] = < xi, sigma[xo] > givestack[ vo vi sigma ] .
+	eq givestack[ ( N, vo ) ( xi, vi ) sigma ] = < xi, N > givestack[ vo vi sigma ] .
 	eq givestack[ self self sigma] = EmptyMem .
 
 endfm

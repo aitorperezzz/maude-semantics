@@ -30,7 +30,9 @@ mod IMPF-SEMANTICS is
 	vars P P' : Prog .
 	vars fl fl' : FunList .
 	var f : FunName .
-	vars vs vs' : ArgList .
+	var vo vo' : AexpList . 
+	var vi vi' : VarList .
+	var xi : Var .
 
 	*** First we rewrite everything to a Program, evaluated on a list of functions and a Memory
 	rl [firstiffunctions] : < fl P , sigma > => < P, fl, sigma > .
@@ -111,9 +113,15 @@ mod IMPF-SEMANTICS is
 
 
 	*** Semantics of function calls
-	crl [funcall] : < f (vs), fl function z = f (vs') P endfunction fl', sigma > => sigma'[z]
-		if < P, fl function z = f (vs') P endfunction fl', givestack[vs vs' sigma] > => 
-		< skip, fl function z = f (vs') P endfunction fl', sigma' > .
+	crl [funcall] : < f (vo), fl function z = f (vi) P endfunction fl', sigma > => sigma'[z]
+		if < P, fl function z = f (vi) P endfunction fl', givestack[vo vi sigma] > => 
+		< skip, fl function z = f (vi) P endfunction fl', sigma' > .
+
+	*** Rewrite rule for givestack when one of the arguments given as input is an arithmetic
+	*** expression
+	crl [givestack] : < f (vo, A, vo'), fl function z = f (vi, xi, vi') P endfunction fl', sigma > =>
+		< f (vo, N, vo'), fl function z = f (vi, xi, vi') P endfunction fl', sigma >
+		if < A, fl function z = f (vi, xi, vi') P endfunction fl', sigma > => N .
 
 
 endm
