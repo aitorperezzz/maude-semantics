@@ -11,7 +11,7 @@ mod IMPF-SEMANTICS is
 	*** Main change to IMP, we evaluate a Script type, and a Prog is now a subsort of Script
 	
 	sorts EvalInit Eval EvalB EvalA .
-	subsort Nat < EvalA .
+	subsort Int < EvalA .
 	subsort Bexp < EvalB .
 	
 	
@@ -22,7 +22,7 @@ mod IMPF-SEMANTICS is
 	subsort Eval < EvalInit .
 	op <_,_,_> : Prog FunList Memory -> Eval [ctor] .
 
-	vars N M : Nat .
+	vars N M : Int .
 	vars b b' : Bexp .
 	vars sigma sigma' sigma'' : Memory .
 	vars v v' z : Var .
@@ -49,6 +49,9 @@ mod IMPF-SEMANTICS is
 
 	*** Evaluation of arithmetic expressions
 	crl [ASum] : < A +. B, fl, sigma > => N + M
+		if < A, fl, sigma > => N /\ < B, fl, sigma > => M .
+
+	crl [ASubtr] : < A -. B, fl, sigma > => N - M
 		if < A, fl, sigma > => N /\ < B, fl, sigma > => M .
 
 	crl [AProd] : < A *. B, fl, sigma > => N * M 

@@ -10,6 +10,7 @@ endfm
 
 fmod IMPF-MEMORY is
 	protecting IMPF-VAR .
+	protecting INT .
 
 	sort MemoryCell Memory .
 	subsort MemoryCell < Memory .
@@ -17,14 +18,14 @@ fmod IMPF-MEMORY is
 	*** The memory will be just a set of pairs variable-number. Order does not matter. No memory is also a
 	*** memory, from which any script begins
 
-	op <_,_> : Var Nat -> MemoryCell [ctor] .
+	op <_,_> : Var Int -> MemoryCell [ctor] .
 
 	op EmptyMem : -> Memory [ctor] .
 	op __ : Memory Memory -> Memory [ctor comm assoc id: EmptyMem] .
 
 	var M : Memory .
 	vars V V' : Var .
-	vars N N' : Nat .
+	vars N N' : Int .
 
 	*** Add elements to memory or replace them
 	op _[_/_] : Memory Var Nat -> Memory .
@@ -39,6 +40,7 @@ endfm
 
 fmod IMPF-SYNTAX is
 	protecting IMPF-VAR .
+	protecting INT .
 
 	sorts Aexp Bexp Prog .
 
@@ -53,13 +55,14 @@ fmod IMPF-SYNTAX is
 	*** Syntax of legal arithmetic expressions
 	*** Variables and numbers are in themselves arithmetic expressions
 	subsort Var < Aexp .
-	subsort Nat < Aexp .
-	op _+._ : Aexp Aexp -> Aexp [comm prec 28] .
-	op _*._ : Aexp Aexp -> Aexp [comm prec 29] .
+	subsort Int < Aexp .
+	op _+._ : Aexp Aexp -> Aexp [comm prec 29] .
+	op _*._ : Aexp Aexp -> Aexp [comm prec 30] .
+	op _-._ : Aexp Aexp -> Aexp [comm prec 28] .
 
 	*** Syntax of legal statements
 	op skip : -> Prog [ctor] .
-	op _:=_ : Var Aexp -> Prog [ctor prec 30] .
+	op _:=_ : Var Aexp -> Prog [ctor prec 31] .
 	op _;_ : Prog Prog -> Prog [ctor assoc] .
 	op if_then_else_ : Bexp Prog Prog -> Prog [ctor] .
 	op while_do_ : Bexp Prog -> Prog [ctor] .
@@ -112,7 +115,7 @@ fmod IMPF-STACK is
 	var sigma : Memory .
 	*** o means outer variable, i means inner variable
 	vars xo xi : Var .
-	var N : Nat .
+	var N : Int .
 
 	*** givestack is a function that will give a personalized memory state whenever a function is called, in the
 	*** sense that the set of statements inside a function will work with a memory state specified by the outer
