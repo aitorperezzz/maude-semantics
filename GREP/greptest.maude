@@ -1,10 +1,10 @@
 load grep_semantics.maude .
 
-rew < search { "h" r. "o" } in { "ho" } , askfor > .
+rew search { "h" r. "o" } in { "ho" } .
 *** true
-rew < search { ( "h" r. "o" ) r* } in { "hohoho" } , askfor > .
+rew search { ( "h" r. "o" ) r* } in { "hohoho" } .
 *** true
-rew < search { "hello" } in { "hello" } , askfor > .
+rew search { "hello" } in { "hello" } .
 *** true
 rew < search { ( "h" r. "o" ) r* } in { "ho" } , askfor > .
 *** true

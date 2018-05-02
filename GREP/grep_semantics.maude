@@ -19,9 +19,12 @@ mod GREP-SEMANTICS is
 	*** false.
 	sort Eval .
 	subsort Bool < Eval .
-	op <_,_> : Prog SepList -> Eval .
+	subsort Eval < ProgInit .
+	op <_,_> : ProgInit SepList -> Eval .
 
 	op askfor : -> SepList [ctor] .
+
+	rl [first] : search { A } in { w } => < search { A } in { w }, askfor > .
 
 	rl [givessplit] : < search { A r. B } in { w } , askfor > => 
 		< search { A r. B } in { w } , split w > .

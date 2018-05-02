@@ -24,9 +24,9 @@ fmod GREP-SYNTAX is
 	op _r* : RegExp -> RegExp [ctor prec 25] .
 
 
-	*** A Prog will recieve a regular expression and a string where is has to find matches
-	sort Prog .
-	op search {_} in {_} : RegExp String -> Prog .
+	*** An Eval will recieve a regular expression and a string where is has to find matches
+	sort ProgInit .
+	op search {_} in {_} : RegExp String -> ProgInit .
 
 endfm
 
