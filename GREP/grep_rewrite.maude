@@ -1,6 +1,6 @@
 load grep_syntax.maude .
 
-mod GREP-SEMANTICS is
+mod GREP-REWRITE is
 
 	protecting GREP-SYNTAX .
 	protecting GREP-UTILS .
@@ -19,19 +19,11 @@ mod GREP-SEMANTICS is
 	*** false.
 	sort Eval .
 	subsort Bool < Eval .
-	subsort Eval < ProgInit .
-	op <_,_> : ProgInit SepList -> Eval .
+	op <_,_> : Prog SepList -> Eval .
 
 	op askfor : -> SepList [ctor] .
 
-	rl [first] : search { A } in { w } => < search { A } in { w }, askfor > .
-
-	rl [givessplit] : < search { A r. B } in { w } , askfor > => 
-		< search { A r. B } in { w } , split w > .
-	rl [givesfrontsplit] : < search { A r* } in { w } , askfor > => 
-		< search { A r* } in { w } , frontsplit w > .
 	
-
 	*** Rules for characters, strings and the empty string
 	
 	rl [epsilontrue] : < search { Epsilon } in { "" } , S > => true .
@@ -42,10 +34,18 @@ mod GREP-SEMANTICS is
 	crl [stringfalse] : < search { w } in { w' } , S > => false
 		if w =/= w' .
 
-	rl [onechartrue] : < search { a } in { a } , S > => true .
-	crl [onecharfalse] : < search { a } in { w } , S > => false
-		if w =/= a .
-				
+	*** rl [onechartrue] : < search { a } in { a } , S > => true .
+	*** crl [onecharfalse] : < search { a } in { w } , S > => false
+	***	if w =/= a .
+	
+
+	*** Rules to rewrite the askfor SepList, depending on whether the operation
+	*** is concatenation or Kleene star
+	rl [givessplit] : < search { A r. B } in { w } , askfor > => 
+		< search { A r. B } in { w } , split w > .
+	rl [givesfrontsplit] : < search { A r* } in { w } , askfor > => 
+		< search { A r* } in { w } , frontsplit w > .			
+
 
 
 	*** Rules for the three operators
@@ -57,12 +57,13 @@ mod GREP-SEMANTICS is
 	crl [sumsecondtrue] : < search { A r+ B } in { w } , S > => true
 		if < search { B } in { w } , askfor > => true .
 	crl [sumfalse] : < search { A r+ B } in { w } , S > => false
-		if < search { A } in { w } , askfor > => false /\ < search { B } in { w } , askfor > => false  .  
+		if < search { A } in { w } , askfor > => false /\ 
+		< search { B } in { w } , askfor > => false  .  
 
 
-	*** STAR operator, it is true if the string is the empty string, if the string matches the regular expression
-	*** itself, or if some splitting has the first side match the regular expression, and the second hand match
-	*** the star again. 
+	*** STAR operator, it is true if the string is the empty string, if the string 
+	*** matches the regular expression itself, or if some splitting has the first side 
+	*** match the regular expression, and the second hand match the star again. 
 	crl [starifempty] : < search { A r* } in { w } , S > => true
 		if w == "" .
 	crl [starstring] : < search { A r* } in { w } , S > => true
@@ -71,14 +72,15 @@ mod GREP-SEMANTICS is
 		if < search { A } in { x } , askfor > => true /\ 
 		< search { A r* } in { y } , askfor > => true .
 
-	*** Star operator is false whenever the regular expression in front of it isn't found in the string
+	*** Star operator is false whenever the regular expression in front of it 
+	*** isn't found in the string
 	crl [starfalse] : < search { A r* } in { w } , S > => false
 		if < search { A } in { w } , askfor > => false .
 
 
-	*** CONCATENATION. We previously give it the split on the right hand side
-	*** It is true if we find a splitting that matches. It is false whenever we cannot find any of the parts
-	*** in our string	
+	*** CONCATENATION. We previously gave it the split on the right hand side
+	*** It is true if we find a splitting that matches. It is false whenever we cannot find 
+	*** any of the parts in our string	
 	crl [concattrue] : < search { A r. B } in { w } , S { x, y } S' > => true
 		if < search { A } in { x } , askfor > => true 
 		/\ < search { B } in { y } , askfor > => true .
@@ -87,6 +89,4 @@ mod GREP-SEMANTICS is
 	crl [concatfalse] : < search { A r. B } in { w } , S > => false
 		if < search { B } in { w } , S > => false .
 	
- 
-
 endm

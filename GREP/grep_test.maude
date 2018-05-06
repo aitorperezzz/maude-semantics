@@ -1,10 +1,13 @@
-load grep_semantics.maude .
+load grep_rewrite.maude .
 
-rew search { "h" r. "o" } in { "ho" } .
+*** List of legal commands for the GREP language and the result that should appear
+*** on screen when run
+
+rew < search { "h" r. "o" } in { "ho" } , askfor > .
 *** true
-rew search { ( "h" r. "o" ) r* } in { "hohoho" } .
+rew < search { ( "h" r. "o" ) r* } in { "hohoho" } , askfor > .
 *** true
-rew search { "hello" } in { "hello" } .
+rew < search { "hello" } in { "hello" } , askfor > .
 *** true
 rew < search { ( "h" r. "o" ) r* } in { "ho" } , askfor > .
 *** true

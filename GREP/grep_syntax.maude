@@ -2,13 +2,14 @@ fmod GREP-SYNTAX is
 
 	protecting STRING .
 
-	*** This grep-like command will search if certain string matches an element of the language specified by
-	*** a regular expression. Strings (and characters) are regular expressions by themselves
+	*** This GREP-like command will search if certain string matches an element of 
+	*** the language specified by a regular expression. Strings (and characters) 
+	*** are regular expressions by themselves
 	sort RegExp .
 	subsort String < RegExp .
 	
 	
-	*** Epsilon is a regular expression, and will match the empty string
+	*** Epsilon is a regular expression, and by definition will match the empty string
 	op Epsilon : -> RegExp [ctor] .
 
 
@@ -24,9 +25,9 @@ fmod GREP-SYNTAX is
 	op _r* : RegExp -> RegExp [ctor prec 25] .
 
 
-	*** An Eval will recieve a regular expression and a string where is has to find matches
-	sort ProgInit .
-	op search {_} in {_} : RegExp String -> ProgInit .
+	*** A Prog will recieve a regular expression and a string where is has to find matches
+	sort Prog .
+	op search {_} in {_} : RegExp String -> Prog .
 
 endfm
 
@@ -35,7 +36,8 @@ fmod GREP-UTILS is
 	protecting NAT .
 	protecting STRING .
 
-	
+	*** This module contains functions that will split a given string into its possible
+	*** divisions in two strings.
 	sorts Sep SepList .
 	subsort Sep < SepList .
 	op EmptySep : -> Sep [ctor] .
@@ -43,24 +45,27 @@ fmod GREP-UTILS is
 	op __ : SepList SepList -> SepList [ctor assoc id: EmptySep] .
 
 	
-	*** firstnumber accepts a number l and a string, and returns the division of the string where
-	*** the first element hast length l
-	op firstnumber(_,_) : Nat String -> SepList [ctor] .
+	*** divisions is a function that will accept a natural number l and a string and will give
+	*** the division of the string where the first element has length l, and then will apply
+	*** divisions to s(l) and the same string w, giving the division where the first string 
+	*** has length l + 1, etc.
+
+
+	op divisions(_,_) : Nat String -> SepList [ctor] .
 	var w : String .
 	var l : Nat .
-	ceq firstnumber( l, w ) = { substr( w, 0, l ) , substr( w, l, sd( length(w), l ) ) } firstnumber( s(l), w ) 
-		if l < length(w) .
-	ceq firstnumber( l, w ) = { w, "" } if l == length(w) . 
+	ceq divisions( l, w ) = { substr( w, 0, l ) , substr( w, l, sd( length(w), l ) ) } 
+		divisions( s(l), w ) if l < length(w) .
+	ceq divisions( l, w ) = { w, "" } if l == length(w) .
 
-	*** frontsplit gives all the possible splits of a string, without the possibility of
-	*** ( "", string )
+	*** Operator frontsplit gives all the possible splits of a string w, 
+	*** without the possibility of { "", w }
 	op frontsplit_ : String -> SepList [ctor] .
-	eq frontsplit w = firstnumber( 1, w ) .
+	eq frontsplit w = divisions( 1, w ) .
 
-	*** The operator split is the same as frontsplit except it adds at the front the possibility of
-	*** ( "", string )
+	*** The operator split is the same as frontsplit except it adds at the front 
+	*** the possibility of { "", w }
 	op split_ : String -> SepList [ctor] .
 	eq split w = { "", w } frontsplit w .
-
 
 endfm
