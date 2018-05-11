@@ -48,7 +48,7 @@ fmod GREP-UTILS is
 	*** divisions is a function that will accept a natural number l and a string and will give
 	*** the division of the string where the first element has length l, and then will apply
 	*** divisions to s(l) and the same string w, giving the division where the first string 
-	*** has length l + 1, etc.
+	*** has length l + 1, etc. This definition is recursive
 
 
 	op divisions(_,_) : Nat String -> SepList [ctor] .

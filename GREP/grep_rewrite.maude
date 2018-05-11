@@ -34,10 +34,6 @@ mod GREP-REWRITE is
 	crl [stringfalse] : < search { w } in { w' } , S > => false
 		if w =/= w' .
 
-	*** rl [onechartrue] : < search { a } in { a } , S > => true .
-	*** crl [onecharfalse] : < search { a } in { w } , S > => false
-	***	if w =/= a .
-	
 
 	*** Rules to rewrite the askfor SepList, depending on whether the operation
 	*** is concatenation or Kleene star
@@ -85,8 +81,8 @@ mod GREP-REWRITE is
 		if < search { A } in { x } , askfor > => true 
 		/\ < search { B } in { y } , askfor > => true .
 	crl [concatfalse] : < search { A r. B } in { w } , S > => false
-		if < search { A } in { w } , S > => false . 
+		if < search { A } in { w } , askfor > => false . 
 	crl [concatfalse] : < search { A r. B } in { w } , S > => false
-		if < search { B } in { w } , S > => false .
+		if < search { B } in { w } , askfor > => false .
 	
 endm

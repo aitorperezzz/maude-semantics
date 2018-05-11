@@ -21,3 +21,9 @@ rew < search { ( "h" r. "o" r. "l" r. "a" ) r* } in { "holahola" } , askfor > .
 *** true
 rew < search { ( "h" r. "o" r. "l" r. "a" ) r* } in { "" } , askfor > .
 *** true
+rew < search { "h" r. "o" r* r+ "i" } in { "hooo" } , askfor > .
+*** true
+rew < search { "h" r. "o" r* r+ "i" } in { "i" } , askfor > .
+*** true
+rew < search { "h" r. "o" r* r+ "i" } in { "hoho" } , askfor > .
+*** false
