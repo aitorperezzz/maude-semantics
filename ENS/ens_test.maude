@@ -1,0 +1,15 @@
+load ens_semantics.maude .
+
+rew exec(
+        { 0 ; LOAD 0 (R0), R1 } 
+        { 1 ; LOAD 1 (R0), R2 } 
+        { 2 ; ADDI R0 0, R3 } 
+        { 3 ; SUBI R2 0, R0 } 
+        { 4 ; BLE 8 } 
+        { 5 ; ADD R3 R1, R3 } 
+        { 6 ; SUBI R2 1, R2 } 
+        { 7 ; BR 3 } 
+        { 8 ; STORE R3, 2(R0) } 
+        , 
+        [ BankInit ; < 0, 10 > < 1, 5 > < 2, 0 > ; 0 ; 0 ; 0 ] ) .
+        
