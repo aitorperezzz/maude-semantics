@@ -1,4 +1,4 @@
-load grep_syntax.maude .
+load grep_config.maude .
 
 mod GREP-REWRITE is
 
