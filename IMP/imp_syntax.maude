@@ -1,60 +1,78 @@
 fmod VAR is
+
+	*** This module defines the variables for the language
+
 	protecting QID .
 
 	sort Var .
 	subsort Qid < Var .
 
-	ops x y z : -> Var [ctor] .
 endfm
 
 fmod MEMORY is
+
+	*** This is the memory module, which specifies how the language keeps track of 
+	*** variable-value pairs.
+
 	protecting VAR .
+	protecting INT .
 
 	sort MemoryCell Memory .
 	subsort MemoryCell < Memory .
 
-	op <_,_> : Var Nat -> MemoryCell [ctor] .
+	op <_,_> : Var Int -> MemoryCell [ctor] .
 
-	op mt : -> Memory [ctor] .
-	op __ : Memory Memory -> Memory [ctor comm assoc id: mt] .
+	op EmptyMemory : -> Memory [ctor] .
+	op __ : Memory Memory -> Memory [ctor comm assoc id: EmptyMemory] .
 
 	var M : Memory .
 	vars V V' : Var .
-	vars N N' : Nat .
+	vars N N' : Int .
 
-	op _[_/_] : Memory Var Nat -> Memory .
+	*** Change values or add elements to memory
+	op _[_/_] : Memory Var Int -> Memory .
 	eq (M < V, N >) [V / N'] = M < V, N' > .
 	eq M [V / N] = M < V, N > [owise] .
 
-	op _[_] : Memory Var ~> Nat .
+	*** Access the value of a variable
+	op _[_] : Memory Var ~> Int .
 	eq (M < V, N >) [V] = N .
+
 endfm
 
 
-fmod LANG-SYNTAX is
+fmod IMP-SYNTAX is
+
+	*** This module specifies the basic syntax
+
 	protecting VAR .
+	protecting CONVERSION .
 
-	sorts Aexp Bexp Prog .
+	sorts AritExp BoolExp Prog .
 
-	*** Sintaxis de expresiones booleanas
-	ops T F : -> Bexp [ctor] .
-	op _B=_ : Aexp Aexp -> Bexp [comm] .
-	op _B<=_ : Aexp Aexp -> Bexp .
-	op Bnot_ : Bexp -> Bexp .
-	op _Band_ : Bexp Bexp -> Bexp [comm] .
-	op _Bor_ : Bexp Bexp -> Bexp [comm] .
+	*** Syntax of boolean expresions
+	ops true false : -> BoolExp [ctor] .
+	op _=_ : AritExp AritExp -> BoolExp [comm prec 26] .
+	op _!=_ : AritExp AritExp -> BoolExp [comm prec 26] .
+	op _leq_ : AritExp AritExp -> BoolExp .
+	op _geq_ : AritExp AritExp -> BoolExp .
+	op not_ : BoolExp -> BoolExp .
+	op _and_ : BoolExp BoolExp -> BoolExp [assoc comm] .
+	op _or_ : BoolExp BoolExp -> BoolExp [assoc comm] .
 
-	*** Sintaxis de expresiones aritmeticas
-	subsort Var < Aexp .
-	subsort Nat < Aexp .
-	op _+._ : Aexp Aexp -> Aexp [comm prec 28] .
-	op _*._ : Aexp Aexp -> Aexp [comm prec 29] .
 
-	*** Sintaxis de los programas permitidos
+	*** Syntax of arithmetic expressions
+	subsort Var < AritExp .
+	subsort Int < AritExp .
+	op _+_ : AritExp AritExp -> AritExp [ditto] .
+	op _-_ : AritExp AritExp -> AritExp [ditto] .
+	op _*_ : AritExp AritExp -> AritExp [ditto] .
+
+	*** Syntax of statements
 	op skip : -> Prog [ctor] .
-	op _:=_ : Var Aexp -> Prog [ctor prec 30] .
+	op _:=_ : Var AritExp -> Prog [ctor prec 30] .
 	op _;_ : Prog Prog -> Prog [ctor assoc] .
-	op if_then_else_ : Bexp Prog Prog -> Prog [ctor] .
-	op while_do_ : Bexp Prog -> Prog [ctor] .
+	op if_then_else_ : BoolExp Prog Prog -> Prog [ctor] .
+	op while_do_ : BoolExp Prog -> Prog [ctor] .
 
 endfm

@@ -1,0 +1,10 @@
+load imp_semantics.maude .
+
+rew < 
+	'a := 10 ; 
+	'times := 5 ; 
+	'result := 0 ; 
+	while 'times geq 1 do 
+		'result := ( 'result + 'a ) ; 
+		'times := ( 'times - 1 ) 
+, EmptyMemory > .

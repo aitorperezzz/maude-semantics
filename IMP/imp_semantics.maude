@@ -1,96 +1,108 @@
-load lang_syntax.maude .
+load imp_syntax.maude .
 
-mod LANG-SEMANTICS is
-	protecting LANG-SYNTAX .
+mod IMP-SEMANTICS is
+
+	*** In this module, the rewrite rules for the IMP language are specified.
+
+	protecting IMP-SYNTAX .
 	protecting MEMORY .
 
-	***( En el modulo de semantica especificamos como se reescriben los estados. ) 
+	sorts Result AritResult BoolResult .
+	subsort AritExp < AritResult .
+	subsort BoolExp < BoolResult .
+	op <_,_> : Prog Memory -> Result [ctor] .
+	op <_,_> : AritExp Memory -> AritResult [ctor] .
+	op <_,_> : BoolExp Memory -> BoolResult [ctor] .
 
-	***( Los tipos que definimos ahora son a los que evalúa un programa, una expresion
-	booleana, o una expresion aritmetica. )
-	
-	sorts Eval EvalB EvalA .
-	subsort Nat < EvalA .
-	subsort Bexp < EvalB .
-	op <_,_> : Prog Memory -> Eval [ctor] .
-	op <_,_> : Aexp Memory -> EvalA [ctor] .
-	op <_,_> : Bexp Memory -> EvalB [ctor] .
-
-	vars N M : Nat .
-	vars b b' : Bexp .
+	vars N M : Int .
+	vars b b' : BoolExp .
 	vars sigma sigma' sigma'' : Memory .
 	vars v v' : Var .
-	vars A B : Aexp .
+	vars A B : AritExp .
 	vars P P' : Prog .
 
-	*** La evaluacion de un numero en cierto estado de la memoria, es el propio numero 
+	*** The evaluation of a number on a certain state of memory is that same number
 	rl [numbers] :  < N, sigma > => N .
 
-	***( La evaluacion de una variable en cierto estado de la memoria es el valor
-	asociado a la variable en ese estado )
+	*** The evaluation of a variable in a certain state of memory is the value
+	*** associated to the variable in that memory
 	rl [variables] : < v, sigma > => sigma [v] .
 
-	*** Evaluar expresiones artimeticas 
-	crl [ASum] : < A +. B, sigma > => N + M
+
+	*** Evaluation of arithmetic expressions
+	crl [arit-sum] : < A + B, sigma > => N + M
 		if < A, sigma > => N /\ < B, sigma > => M .
 
-	crl [AProd] : < A *. B, sigma > => N * M 
+	crl [arit-sub] : < A - B, sigma > => N - M
 		if < A, sigma > => N /\ < B, sigma > => M .
 
-	*** Evaluar expresiones booleanas 
-	rl [true] : < T, sigma > => T .
-	rl [false] : < F, sigma > => F .
+	crl [arit-prod] : < A * B, sigma > => N * M
+		if < A, sigma > => N /\ < B, sigma > => M .
 
-	crl [Bequal] : < A B= B, sigma > => < T, sigma >
+
+	*** Evaluation of boolean expressions
+	rl [true] : < true, sigma > => true .
+	rl [false] : < false, sigma > => false .
+
+	crl [bool-equal-true] : < A = B, sigma > => < true, sigma >
 		if < A, sigma > => N /\ < B, sigma > => N .
-	crl [Bequal] : < A B= B, sigma > => < F, sigma >
-		if < A, sigma > => N /\  < B, sigma > => M /\ N =/= M  .
+	crl [bool-equal-false] : < A = B, sigma > => < false, sigma >
+		if < A, sigma > => M /\  < B, sigma > => N /\ M =/= N .
+	crl [bool-diff-true] : < A != B, sigma > => < true, sigma >
+		if < A = B, sigma > => < false, sigma > .
+	crl [bool-diff-false] : < A != B, sigma > => < false, sigma > 
+		if < A = B, sigma > => < true, sigma > .
 
-	crl [Blesser] : < A B<= B, sigma > => < T, sigma >
-		if < A, sigma > => N  /\  < B, sigma > => M /\ N <= M .
-	crl [Bgreater] : < A B<= B, sigma > => < F, sigma > 
-		if < A, sigma > => N /\ < B, sigma > => M /\ N > M .
+	crl [leq-true] : < A leq B, sigma > => < true, sigma >
+		if < A, sigma > => M  /\  < B, sigma > => N /\ M <= N .
+	crl [leq-false] : < A leq B, sigma > => < false, sigma >
+		if < A, sigma > => M /\ < B, sigma > => N /\ M > N .
+	crl [geq-true] : < A geq B, sigma > => < true, sigma >
+		if < A, sigma > => M /\ < B, sigma > => N /\ M >= N .
+	crl [geq-false] : < A geq B, sigma > => < false, sigma >
+		if < A, sigma > => M /\ < B, sigma > => N /\ M < N .
 
-	crl [Bnottrue] : < Bnot b, sigma > => < T, sigma >
-		if < b, sigma > => < F, sigma > .
-	crl [Bnotfalse] : < Bnot b, sigma > => < F, sigma >
-		if < b, sigma > => < T, sigma > . 
+	crl [bool-not-true] : < not b, sigma > => < true, sigma >
+		if < b, sigma > => < false, sigma > .
+	crl [bool-not-false] : < not b, sigma > => < false, sigma >
+		if < b, sigma > => < true, sigma > .
 
-	crl [Bortrue] : < b Bor b', sigma > => < T, sigma > 
-		if < b, sigma > => < T, sigma > /\ < b', sigma > => < T, sigma > .
-	crl [Bortrue] : < b Bor b', sigma > => < T, sigma > 
-		if < b, sigma > => < T, sigma > /\ < b', sigma > => < F, sigma > .
-	crl [Bortrue] : < b Bor b', sigma > => < T, sigma > 
-		if < b, sigma > => < F, sigma > /\ < b', sigma > => < T, sigma > .
-	crl [Borfalse] : < b Bor b', sigma > => < F, sigma >
-		if < b, sigma > => < F, sigma > /\ < b', sigma > => < F, sigma > .
+	crl [bool-or-true] : < b or b', sigma > => < true, sigma >
+		if < b, sigma > => < true, sigma > /\ < b', sigma > => < true, sigma > .
+	crl [bool-or-true] : < b or b', sigma > => < true, sigma >
+		if < b, sigma > => < true, sigma > /\ < b', sigma > => < false, sigma > .
+	crl [bool-or-true] : < b or b', sigma > => < true, sigma >
+		if < b, sigma > => < false, sigma > /\ < b', sigma > => < true, sigma > .
+	crl [bool-or-false] : < b or b', sigma > => < false, sigma >
+		if < b, sigma > => < false, sigma > /\ < b', sigma > => < false, sigma > .
 
-	crl [Bandtrue] : < b Band b', sigma > => < T, sigma >
-		if < b, sigma > => < T, sigma > /\ < b', sigma > => < T, sigma > .
-	crl [Bandfalse] : < b Band b', sigma > => < F, sigma >
-		if < b, sigma > => < F, sigma > /\ < b', sigma > => < T, sigma > .
-	crl [Bandfalse] : < b Band b', sigma > => < F, sigma >
-		if < b, sigma > => < T, sigma > /\ < b', sigma > => < F, sigma > .
-	crl [Bandfalse] : < b Band b', sigma > => < F, sigma >
-		if < b, sigma > => < F, sigma > /\ < b', sigma > => < F, sigma > .
+	crl [bool-and-true] : < b and b', sigma > => < true, sigma >
+		if < b, sigma > => < true, sigma > /\ < b', sigma > => < true, sigma > .
+	crl [bool-and-false] : < b and b', sigma > => < false, sigma >
+		if < b, sigma > => < false, sigma > /\ < b', sigma > => < true, sigma > .
+	crl [bool-and-false] : < b and b', sigma > => < false, sigma >
+		if < b, sigma > => < true, sigma > /\ < b', sigma > => < false, sigma > .
+	crl [bool-and-false] : < b and b', sigma > => < false, sigma >
+		if < b, sigma > => < false, sigma > /\ < b', sigma > => < false, sigma > .
 
-	*** Evaluar programas
-	crl [assig] : < v := A, sigma > => < skip, sigma[v / N] >
+
+	*** Evaluation of programs
+	crl [prog-assign] : < v := A, sigma > => < skip, sigma[v / N] >
 		if < A, sigma > => N .
 
-	crl [comp] : < P ; P', sigma > => < skip, sigma' >
+	crl [prog-comp] : < P ; P', sigma > => < skip, sigma' >
 		if < P, sigma > => < skip, sigma'' > /\
-		   < P', sigma'' > => < skip, sigma' > .
+		< P', sigma'' > => < skip, sigma' > .
 
-	crl [iftrue] : < if b then P else P', sigma > => < P, sigma >
-		if < b, sigma > => < T, sigma > .
-	crl [iffalse] : < if b then P else P', sigma > => < P', sigma >
-		if < b, sigma > => < F, sigma > .
+	crl [prog-if-true] : < if b then P else P', sigma > => < P, sigma >
+		if < b, sigma > => < true, sigma > .
+	crl [prog-if-false] : < if b then P else P', sigma > => < P', sigma >
+		if < b, sigma > => < false, sigma > .
 
-	crl [whiletrue] : < while b do P, sigma > => < skip, sigma' >
-		if < b, sigma > => < T, sigma > /\
-		   < P ; while b do P, sigma > => < skip, sigma' > .
-	crl [whilefalse] : < while b do P, sigma > => < skip, sigma >
-		if < b, sigma > => < F, sigma > .
+	crl [prog-while-true] : < while b do P, sigma > => < skip, sigma' >
+		if < b, sigma > => < true, sigma > /\
+		< P ; while b do P, sigma > => < skip, sigma' > .
+	crl [prog-while-false] : < while b do P, sigma > => < skip, sigma >
+		if < b, sigma > => < false, sigma > .
 
 endm
