@@ -1,71 +1,67 @@
 fmod GREP-SYNTAX is
 
-	protecting STRING .
+	*** This GREP-like command will decide if a certain string belongs to
+	*** the language specified by a regular expression.
 
-	*** This GREP-like command will search if certain string matches an element of 
-	*** the language specified by a regular expression. Strings (and characters) 
-	*** are regular expressions by themselves
-	sort RegExp .
-	subsort String < RegExp .
-	
-	
-	*** Epsilon is a regular expression, and by definition will match the empty string
-	op Epsilon : -> RegExp [ctor] .
+		protecting STRING .
 
+	*** Strings and characters are regular expressions by themselves
+		sort RegExp .
+		subsort String < RegExp .
 
-	*** Syntax of regular expressions
+	*** Epsilon is a regular expression, which by definition will match the empty string
+		op Epsilon : -> RegExp [ctor] .
 
+	*** Operators on regular expressions
 	*** SUM operator
-	op _r+_ : RegExp RegExp -> RegExp [ctor assoc comm prec 27] .
-
+		op _r+_ : RegExp RegExp -> RegExp [ctor assoc comm prec 27] .
 	*** CONCATENATION operator
-	op _r._ :  RegExp RegExp -> RegExp [ctor assoc prec 26] .
-
+		op _r._ : RegExp RegExp -> RegExp [ctor assoc prec 26] .
 	*** STAR, or Kleene star
-	op _r* : RegExp -> RegExp [ctor prec 25] .
+		op _r* : RegExp -> RegExp [ctor prec 25] .
 
 
-	*** A Prog will recieve a regular expression and a string where is has to find matches
-	sort Prog .
-	op search {_} in {_} : RegExp String -> Prog .
+	*** A Prog type will recieve a string and has to decide if it belongs
+	*** to the language of the regular expression
+		sort Prog .
+		op is {_} in {_} : String RegExp -> Prog .
 
 endfm
 
 fmod GREP-UTILS is
 
-	protecting NAT .
-	protecting STRING .
+	*** This module contains auxiliary functions
 
-	*** This module contains functions that will split a given string into its possible
-	*** divisions in two strings.
-	sorts Sep SepList .
-	subsort Sep < SepList .
-	op EmptySep : -> Sep [ctor] .
-	op {_,_} : String String -> Sep [ctor] .
-	op __ : SepList SepList -> SepList [ctor assoc id: EmptySep] .
+		protecting NAT .
+		protecting STRING .
 
-	
-	*** divisions is a function that will accept a natural number l and a string and will give
-	*** the division of the string where the first element has length l, and then will apply
-	*** divisions to s(l) and the same string w, giving the division where the first string 
-	*** has length l + 1, etc. This definition is recursive
+	*** Define some types related to the separation of a string into two
+	*** consecutive strings
+		sorts Sep SepList .
+		subsort Sep < SepList .
+		op EmptySep : -> Sep [ctor] .
+		op {_,_} : String String -> Sep [ctor] .
+		op __ : SepList SepList -> SepList [ctor assoc id: EmptySep] .
 
+	*** This divisions(,) is a recursive function that will receive a natural number
+	*** l and a string w and will return a separation in which the first substring has
+	*** length l, and then will call herself recursively with the same string w but
+	*** with the succesor of l, s(l)
+		op divisions(_,_) : Nat String -> SepList [ctor] .
+		var w : String .
+		var l : Nat .
+		ceq divisions( l, w ) = { substr( w, 0, l ) , substr( w, l, sd( length(w), l ) ) }
+			divisions( s(l), w ) if l < length(w) .
+		ceq divisions( l, w ) = { w, "" } if l == length(w) .
 
-	op divisions(_,_) : Nat String -> SepList [ctor] .
-	var w : String .
-	var l : Nat .
-	ceq divisions( l, w ) = { substr( w, 0, l ) , substr( w, l, sd( length(w), l ) ) } 
-		divisions( s(l), w ) if l < length(w) .
-	ceq divisions( l, w ) = { w, "" } if l == length(w) .
-
-	*** Operator frontsplit gives all the possible splits of a string w, 
+	*** Operator frontsplit gives all the possible splits of a string w,
 	*** without the possibility of { "", w }
-	op frontsplit_ : String -> SepList [ctor] .
-	eq frontsplit w = divisions( 1, w ) .
+		op frontsplit_ : String -> SepList [ctor] .
+		eq frontsplit w = divisions( 1, w ) .
 
-	*** The operator split is the same as frontsplit except it adds at the front 
+	*** The operator split is the same as frontsplit except it adds at the front
 	*** the possibility of { "", w }
-	op split_ : String -> SepList [ctor] .
-	eq split w = { "", w } frontsplit w .
+		op split_ : String -> SepList [ctor] .
+		eq split w = { "", w } frontsplit w .
 
 endfm

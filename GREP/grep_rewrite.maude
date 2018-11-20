@@ -2,87 +2,84 @@ load grep_config.maude .
 
 mod GREP-REWRITE is
 
-	protecting GREP-SYNTAX .
-	protecting GREP-UTILS .
-	
-	vars A B C : RegExp .
-	var a : Char .
-	vars w w' : String .
-	vars x y : String .
-	vars S S' : SepList .
-	
+	*** Rewrite equations for the GREP module
+		protecting GREP-SYNTAX .
+		protecting GREP-UTILS .
 
-	*** Some operators do not need the splitting of the string to work. Concatenation needs the 
+		vars A B C : RegExp .
+		var a : Char .
+		vars w w' : String .
+		vars x y : String .
+		vars S S' : SepList .
+
+
+	*** Some operators do not need the splitting of the string to work. Concatenation needs the
 	*** split, and Kleene star needs the frontsplit. We design an operator called askfor, which
 	*** will transform to a split when concatenation and to a frontsplit when Kleene star
-	*** We will say that an evaluation is a Prog and a SepList. This will ultimately give true or 
+	*** We will say that an evaluation is a Prog and a SepList. This will ultimately give true or
 	*** false.
-	sort Eval .
-	subsort Bool < Eval .
-	op <_,_> : Prog SepList -> Eval .
+		sort Eval .
+		subsort Bool < Eval .
+		op <_,_> : Prog SepList -> Eval .
 
-	op askfor : -> SepList [ctor] .
+		op askfor : -> SepList [ctor] .
 
-	
-	*** Rules for characters, strings and the empty string
-	
-	rl [epsilontrue] : < search { Epsilon } in { "" } , S > => true .
-	crl [epsilonfalse] : < search { Epsilon } in { w } , S > => false
-		if w =/= "" .
 
-	rl [stringtrue] : < search { w } in { w } , S > => true .
-	crl [stringfalse] : < search { w } in { w' } , S > => false
-		if w =/= w' .
+	*** Rules for strings, including the empty string
+		rl [epsilontrue] : < is { "" } in { Epsilon } , S > => true .
+		crl [epsilonfalse] : < is { w } in { Epsilon } , S > => false
+			if w =/= "" .
+
+		rl [stringtrue] : < is { w } in { w } , S > => true .
+		crl [stringfalse] : < is { w } in { w' } , S > => false
+			if w =/= w' .
 
 
 	*** Rules to rewrite the askfor SepList, depending on whether the operation
 	*** is concatenation or Kleene star
-	rl [givessplit] : < search { A r. B } in { w } , askfor > => 
-		< search { A r. B } in { w } , split w > .
-	rl [givesfrontsplit] : < search { A r* } in { w } , askfor > => 
-		< search { A r* } in { w } , frontsplit w > .			
-
+		rl [givessplit] : < is { w } in { A r. B } , askfor > =>
+			< is { w } in { A r. B } , split w > .
+		rl [givesfrontsplit] : < is { w } in { A r* } , askfor > =>
+			< is { w } in { A r* } , frontsplit w > .
 
 
 	*** Rules for the three operators
-	
-	*** SUM operator. It is true if the right or the left side matches
-	*** It is false when none of the sides match
-	crl [sumfirsttrue] : < search { A r+ B } in { w } , S > => true
-		if < search { A } in { w } , askfor > => true .  
-	crl [sumsecondtrue] : < search { A r+ B } in { w } , S > => true
-		if < search { B } in { w } , askfor > => true .
-	crl [sumfalse] : < search { A r+ B } in { w } , S > => false
-		if < search { A } in { w } , askfor > => false /\ 
-		< search { B } in { w } , askfor > => false  .  
+
+	*** SUM operator is true if the right or the left side matches,
+	*** false when none of the sides match
+		crl [sumfirsttrue] : < is { w } in { A r+ B } , S > => true
+			if < is { w } in { A } , askfor > => true .
+		crl [sumsecondtrue] : < is { w } in { A r+ B } , S > => true
+			if < is { w } in { B } , askfor > => true .
+		crl [sumfalse] : < is { w } in { A r+ B } , S > => false
+			if < is { w } in { A } , askfor > => false /\
+			< is { w } in { B } , askfor > => false  .
 
 
-	*** STAR operator, it is true if the string is the empty string, if the string 
-	*** matches the regular expression itself, or if some splitting has the first side 
-	*** match the regular expression, and the second hand match the star again. 
-	crl [starifempty] : < search { A r* } in { w } , S > => true
-		if w == "" .
-	crl [starstring] : < search { A r* } in { w } , S > => true
-		if < search { A } in { w } , askfor > => true .
-	crl [starnormal] : < search { A r* } in { w } , S { x, y } S' > => true
-		if < search { A } in { x } , askfor > => true /\ 
-		< search { A r* } in { y } , askfor > => true .
-
-	*** Star operator is false whenever the regular expression in front of it 
+	*** STAR operator is true if the string is the empty string, if the string
+	*** matches the regular expression itself, or if some splitting has the first side
+	*** match the regular expression, and the second side match the star again
+		crl [starifempty] : < is { w } in { A r* } , S > => true
+			if w == "" .
+		crl [starstring] : < is { w } in { A r* } , S > => true
+			if < is { w } in { A } , askfor > => true .
+		crl [starnormal] : < is { w } in { A r* } , S { x, y } S' > => true
+			if < is { x } in { A } , askfor > => true /\
+			< is { y } in { A r* } , askfor > => true .
+	*** STAR operator is false whenever the regular expression in front of it
 	*** isn't found in the string
-	crl [starfalse] : < search { A r* } in { w } , S > => false
-		if < search { A } in { w } , askfor > => false .
+		crl [starfalse] : < is { w } in { A r* } , S > => false
+			if < is { w } in { A } , askfor > => false .
 
 
-	*** CONCATENATION. We previously gave it the split on the right hand side
-	*** It is true if we find a splitting that matches. It is false whenever we cannot find 
-	*** any of the parts in our string	
-	crl [concattrue] : < search { A r. B } in { w } , S { x, y } S' > => true
-		if < search { A } in { x } , askfor > => true 
-		/\ < search { B } in { y } , askfor > => true .
-	crl [concatfalse] : < search { A r. B } in { w } , S > => false
-		if < search { A } in { w } , askfor > => false . 
-	crl [concatfalse] : < search { A r. B } in { w } , S > => false
-		if < search { B } in { w } , askfor > => false .
-	
+	*** CONCATENATION is true if any of the splittings matches, it is false
+	*** if we cannot find any of the parts of the string
+		crl [concattrue] : < is { w } in { A r. B } , S { x, y } S' > => true
+			if < is { x } in { A } , askfor > => true
+			/\ < is { y } in { B } , askfor > => true .
+		crl [concatfalse] : < is { w } in { A r. B } , S > => false
+			if < is { w } in { A } , askfor > => false .
+		crl [concatfalse] : < is { w } in { A r. B } , S > => false
+			if < is { w } in { B } , askfor > => false .
+
 endm

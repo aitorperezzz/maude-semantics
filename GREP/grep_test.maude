@@ -1,29 +1,27 @@
 load grep_rewrite.maude .
 
 *** List of legal commands for the GREP language and the result that should appear
-*** on screen when run
+*** on screen when ran
 
-rew < search { "h" r. "o" } in { "ho" } , askfor > .
-*** true
-rew < search { ( "h" r. "o" ) r* } in { "hohoho" } , askfor > .
-*** true
-rew < search { "hello" } in { "hello" } , askfor > .
-*** true
-rew < search { ( "h" r. "o" ) r* } in { "ho" } , askfor > .
-*** true
-rew < search { ( "h" r. "o" ) r* } in { "hahaha" } , askfor > .
-*** false
-rew < search { "h" r. "o" r. "l" r. "a" } in { "hola" } , askfor > .
-*** true
-rew < search { "h" r. "o" r. "l" r. "a" } in { "holahola" } , askfor > .
-*** false
-rew < search { ( "h" r. "o" r. "l" r. "a" ) r* } in { "holahola" } , askfor > .
-*** true
-rew < search { ( "h" r. "o" r. "l" r. "a" ) r* } in { "" } , askfor > .
-*** true
-rew < search { "h" r. "o" r* r+ "i" } in { "hooo" } , askfor > .
-*** true
-rew < search { "h" r. "o" r* r+ "i" } in { "i" } , askfor > .
-*** true
-rew < search { "h" r. "o" r* r+ "i" } in { "hoho" } , askfor > .
-*** false
+rew < is { "ho" } in { "h" r. "o" } , askfor > .
+  *** true
+rew < is { "hohoho" } in { ( "h" r. "o" ) r* } , askfor > .
+  *** true
+rew < is { "hello" } in { "hello" } , askfor > .
+  *** true
+rew < is { "ho" } in { ( "h" r. "o" ) r* } , askfor > .
+  *** true
+rew < is { "hola" } in { "h" r. "o" r. "l" r. "a" } , askfor > .
+  *** true
+rew < is { "holahola" } in { "h" r. "o" r. "l" r. "a" } , askfor > .
+  *** false
+rew < is { "holahola" } in { ( "h" r. "o" r. "l" r. "a" ) r* } , askfor > .
+  *** true
+rew < is { "" } in { ( "h" r. "o" r. "l" r. "a" ) r* } , askfor > .
+  *** true
+rew < is { "hooo" } in { "h" r. "o" r* r+ "i" } , askfor > .
+  *** true
+rew < is { "i" } in { "h" r. "o" r* r+ "i" } , askfor > .
+  *** true
+rew < is { "hoho" } in { "h" r. "o" r* r+ "i" } , askfor > .
+  *** false
