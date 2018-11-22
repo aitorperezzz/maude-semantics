@@ -1,58 +1,23 @@
-fmod VAR is
+load imp_utils.maude .
 
-	*** This module defines the variables for the language
+fmod IMP-BASIC-SYNTAX is
 
-	protecting QID .
+	*** This module specifies the basic syntax.
 
-	sort Var .
-	subsort Qid < Var .
-
-endfm
-
-fmod MEMORY is
-
-	*** This is the memory module, which specifies how the language keeps track of 
-	*** variable-value pairs.
-
-	protecting VAR .
-	protecting INT .
-
-	sort MemoryCell Memory .
-	subsort MemoryCell < Memory .
-
-	op <_,_> : Var Int -> MemoryCell [ctor] .
-
-	op EmptyMemory : -> Memory [ctor] .
-	op __ : Memory Memory -> Memory [ctor comm assoc id: EmptyMemory] .
-
-	var M : Memory .
-	vars V V' : Var .
-	vars N N' : Int .
-
-	*** Change values or add elements to memory
-	op _[_/_] : Memory Var Int -> Memory .
-	eq (M < V, N >) [V / N'] = M < V, N' > .
-	eq M [V / N] = M < V, N > [owise] .
-
-	*** Access the value of a variable
-	op _[_] : Memory Var ~> Int .
-	eq (M < V, N >) [V] = N .
-
-endfm
-
-
-fmod IMP-SYNTAX is
-
-	*** This module specifies the basic syntax
-
-	protecting VAR .
-	protecting CONVERSION .
+	protecting IMP-STACK .
 
 	sorts AritExp BoolExp Prog .
 
-	*** Syntax of boolean expresions
+	*** Syntax of arithmetic expressions.
+	subsort Var < AritExp .
+	subsort Int < AritExp .
+	op _+_ : AritExp AritExp -> AritExp [ditto] .
+	op _-_ : AritExp AritExp -> AritExp [ditto] .
+	op _*_ : AritExp AritExp -> AritExp [ditto] .
+
+	*** Syntax of boolean expresions.
 	ops true false : -> BoolExp [ctor] .
-	op _=_ : AritExp AritExp -> BoolExp [comm prec 26] .
+	op _==_ : AritExp AritExp -> BoolExp [comm prec 26] .
 	op _!=_ : AritExp AritExp -> BoolExp [comm prec 26] .
 	op _leq_ : AritExp AritExp -> BoolExp .
 	op _geq_ : AritExp AritExp -> BoolExp .
@@ -60,19 +25,65 @@ fmod IMP-SYNTAX is
 	op _and_ : BoolExp BoolExp -> BoolExp [assoc comm] .
 	op _or_ : BoolExp BoolExp -> BoolExp [assoc comm] .
 
-
-	*** Syntax of arithmetic expressions
-	subsort Var < AritExp .
-	subsort Int < AritExp .
-	op _+_ : AritExp AritExp -> AritExp [ditto] .
-	op _-_ : AritExp AritExp -> AritExp [ditto] .
-	op _*_ : AritExp AritExp -> AritExp [ditto] .
-
-	*** Syntax of statements
+	*** Syntax of statements.
 	op skip : -> Prog [ctor] .
-	op _:=_ : Var AritExp -> Prog [ctor prec 30] .
+	op _=_ : Var AritExp -> Prog [ctor prec 30] .
 	op _;_ : Prog Prog -> Prog [ctor assoc] .
 	op if_then_else_ : BoolExp Prog Prog -> Prog [ctor] .
 	op while_do_ : BoolExp Prog -> Prog [ctor] .
 
 endfm
+
+fmod IMP-FUNCTIONS-SYNTAX is
+
+	*** This module specifies the syntax of function calls.
+	
+	protecting IMP-BASIC-SYNTAX .
+
+	*** Define lists of variables for the definition of a function.
+	sort VarList .
+	subsort Var < VarList .
+	op void : -> VarList [ctor] .
+	op _,_ : VarList VarList -> VarList [ctor assoc id: void] .
+
+	*** Define lists of arithmetic expressions for the function calls from scripts.
+	sort AritExpList .
+	subsort AritExp < AritExpList .
+	subsort VarList < AritExpList .
+	op _,_ : AritExpList AritExpList -> AritExpList [ctor assoc id: void] .	
+	
+	*** Define the Func type.
+	sorts FuncName Func FuncList .
+	subsort Qid < FuncName .
+	subsort Func < FuncList .
+	op EmptyFuncList : -> FuncList [ctor] .
+	op __ : FuncList FuncList -> FuncList [ctor assoc comm id: EmptyFuncList] .
+
+	*** Define the type Script, a Prog type followed by, possibly, a list of functions.
+	sort Script .
+	op main{_} : Prog -> Script [ctor] .
+	op main{_}functions{_} : Prog FuncList -> Script [ctor] .
+
+	*** Specify how to write a single function.
+	op function _ = _ (_) _ endfunction : Var FuncName VarList Prog -> Func [ctor] .
+
+	
+	*** Define the function call: the name of the function followed by a list 
+	*** of arithmetic expressions.
+	op _(_) : FuncName AritExpList -> AritExp [ctor] .
+
+
+	*** Define the syntax to give each function its own stack.
+	vars v b : Var .
+	var vl : VarList .
+	var al : AritExpList .
+	var N : Int .
+	var sigma : Stack .
+
+	op giveStack [___] : VarList AritExpList Stack -> Stack [ctor] .
+	eq giveStack [ ( v, vl ) ( b, al ) sigma ] = < v, sigma [ b ] > giveStack [ vl al sigma ] .
+	eq giveStack [ ( v, vl ) ( N, al ) sigma ] = < v, N > giveStack [ vl al sigma ] .
+	eq giveStack [ ( void ) ( void ) sigma ] = EmptyStack . 
+
+endfm
+

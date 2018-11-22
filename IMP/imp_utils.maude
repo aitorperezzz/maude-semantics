@@ -1,0 +1,41 @@
+fmod IMP-VAR is
+
+	*** This module defines the variables for the language.
+
+	protecting QID .
+
+	sort Var .
+	subsort Qid < Var .
+
+endfm
+
+fmod IMP-STACK is
+
+	*** This module specifies how the language keeps track of the 
+	*** variable-value pairs.
+
+	protecting IMP-VAR .
+	protecting INT .
+
+	sorts StackCell Stack .
+	subsort StackCell < Stack .
+
+	op <_,_> : Var Int -> StackCell [ctor] .
+
+	op EmptyStack : -> Stack [ctor] .
+	op __ : Stack Stack -> Stack [ctor comm assoc id: EmptyStack] .
+
+	var M : Stack .
+	vars v v' : Var .
+	vars N N' : Int .
+
+	*** Change values or add elements to the stack.
+	op _[_/_] : Stack Var Int -> Stack .
+	eq (M < v, N >) [v / N'] = M < v, N' > .
+	eq M [v / N] = M < v, N > [owise] .
+
+	*** Access the value of a variable in the stack, if it is there.
+	op _[_] : Stack Var ~> Int .
+	eq (M < v, N >) [v] = N .
+
+endfm
