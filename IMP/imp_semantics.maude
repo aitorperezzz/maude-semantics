@@ -28,7 +28,7 @@ mod IMP-BASIC-SEMANTICS is
 	*** semantics of the language
 	rl [exec-default] : exec S => exec S with EmptyStack .
 	rl [exec-nofunctions] : exec main {P} with sigma => < P, EmptyFuncList, sigma > .
-	rl [exec-functions] : exec ( main {P} functions {fl} ) with sigma => < P, fl, sigma > .
+	rl [exec-functions] : exec ( main {P} fl ) with sigma => < P, fl, sigma > .
 	
 
 	*** The evaluation of a number on a certain state of memory is that same number
@@ -136,15 +136,15 @@ mod IMP-FUNCTIONS-SEMANTICS is
 	vars al al' : AritExpList .
 
 	*** Give a personalised stack to a function call.
-	crl [function-givestack] : < f ( al ), fl function z = f ( vl ) P endfunction, sigma > => sigma'[z]  
-		if < P, fl function z = f ( vl ) P endfunction, giveStack [ vl al sigma ] > => 
-		< skip, fl function z = f ( vl ) P endfunction, sigma' > .	
+	crl [function-givestack] : < f ( al ), fl function z = f ( vl ) { P }, sigma > => sigma'[z]  
+		if < P, fl function z = f ( vl ) { P }, giveStack [ vl al sigma ] > => 
+		< skip, fl function z = f ( vl ) { P }, sigma' > .	
 
-	*** If one of the arguments passed to a function is an aritmetic expression, 
+	*** If one of the arguments passed to a function is an arithmetic expression, 
 	*** first evaluate it.
-	crl [function-arit] : < f (al, a, al'), fl function z = f ( vl ) P endfunction, sigma > => 
-		< f (al, N, al'), fl function z = f ( vl ) P endfunction, sigma > 
-		if < a, fl function z = f ( vl ) P endfunction, sigma > => N .
+	crl [function-arit] : < f (al, a, al'), fl function z = f ( vl ) { P }, sigma > => 
+		< f (al, N, al'), fl function z = f ( vl ) { P }, sigma > 
+		if < a, fl function z = f ( vl ) { P }, sigma > => N .
 
 
 endm

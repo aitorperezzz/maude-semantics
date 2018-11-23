@@ -1,10 +1,48 @@
 load imp_semantics.maude .
 
-rew < 
-	'a := 10 ; 
-	'times := 5 ; 
-	'result := 0 ; 
-	while 'times geq 1 do 
-		'result := ( 'result + 'a ) ; 
-		'times := ( 'times - 1 ) 
-, EmptyMemory > .
+*** Test for the basic syntax part
+rew exec main
+	{ 
+		'a = 10 ; 
+		'times = 5 ; 
+		'result = 0 ; 
+		while 'times geq 1 do 
+			'result = ( 'result + 'a ) ; 
+			'times = ( 'times - 1 )
+	} .
+
+
+*** Tests for functions part
+rew exec ( main
+	{
+		'a = 10 ; 
+		'b = 5 ;
+		'c = ( 'sum ( 'a, 'b ) ) 
+	}
+	function 'z = 'sum ( 'x, 'y ) {
+			'z = ( 'x + 'y ) 
+	} ) .
+
+rew exec ( main { 
+		'n = 5 ; 
+		'f = ( 'factorial('n) ) 
+	}  
+	function 'z = 'factorial('integer) { 
+		if 'integer geq 2 then 
+			'z = ( 'integer * ( 'factorial('integer - 1) ) ) 
+		else 
+			'z = 1 
+	} ) .
+
+rew exec ( main { 
+		'a = 5 ; 
+		'b = ( 'sum('a, 1) ) ;
+		'c = ( 'product('b, ('sum('a, 2))) )  
+	}
+	function 'z = 'sum ('x, 'y) { 
+		'z = ('x + 'y) 
+	}
+	function 'w = 'product('x, 'y) { 
+		'w = ( 'x * 'y ) 
+	} ) .
+		

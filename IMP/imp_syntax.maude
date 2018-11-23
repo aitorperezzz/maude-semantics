@@ -62,10 +62,10 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	*** Define the type Script, a Prog type followed by, possibly, a list of functions.
 	sort Script .
 	op main{_} : Prog -> Script [ctor] .
-	op main{_}functions{_} : Prog FuncList -> Script [ctor] .
+	op main{_}_ : Prog FuncList -> Script [ctor] .
 
 	*** Specify how to write a single function.
-	op function _ = _ (_) _ endfunction : Var FuncName VarList Prog -> Func [ctor] .
+	op function _ = _ (_) {_} : Var FuncName VarList Prog -> Func [ctor] .
 
 	
 	*** Define the function call: the name of the function followed by a list 
@@ -73,7 +73,7 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	op _(_) : FuncName AritExpList -> AritExp [ctor] .
 
 
-	*** Define the syntax to give each function its own stack.
+	*** Define the syntax to give each function its own Stack.
 	vars v b : Var .
 	var vl : VarList .
 	var al : AritExpList .
