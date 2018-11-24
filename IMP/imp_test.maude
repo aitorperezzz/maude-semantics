@@ -12,8 +12,8 @@ rew exec main
 	} .
 
 
-*** Tests for functions part
-rew exec ( main
+*** Tests for functions
+rew exec ( main 
 	{
 		'a = 10 ; 
 		'b = 5 ;
@@ -45,4 +45,27 @@ rew exec ( main {
 	function 'w = 'product('x, 'y) { 
 		'w = ( 'x * 'y ) 
 	} ) .
-		
+
+
+*** Tests for classes
+rew exec ( main 
+	{ 
+		'a = 5 ; 
+		( 'z = new 'Ball ('a) ) 
+	} 
+	class 'Ball { 
+		constructor ('x) { 
+			( this . 'w ) = 'x  
+		} 
+	} ) .
+
+
+
+
+
+
+
+
+
+
+

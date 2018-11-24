@@ -50,40 +50,161 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	sort AritExpList .
 	subsort AritExp < AritExpList .
 	subsort VarList < AritExpList .
-	op _,_ : AritExpList AritExpList -> AritExpList [ctor assoc id: void] .	
+	op _,_ : AritExpList AritExpList -> AritExpList [ctor assoc id: void] .
 	
 	*** Define the Func type.
-	sorts FuncName Func FuncList .
+	sorts FuncName Func .
 	subsort Qid < FuncName .
-	subsort Func < FuncList .
-	op EmptyFuncList : -> FuncList [ctor] .
-	op __ : FuncList FuncList -> FuncList [ctor assoc comm id: EmptyFuncList] .
+	***subsort Func < FuncList .
 
-	*** Define the type Script, a Prog type followed by, possibly, a list of functions.
-	sort Script .
-	op main{_} : Prog -> Script [ctor] .
-	op main{_}_ : Prog FuncList -> Script [ctor] .
-
-	*** Specify how to write a single function.
+	*** Specify how to declare a function.
 	op function _ = _ (_) {_} : Var FuncName VarList Prog -> Func [ctor] .
+	
+	*** Specify how to call a function.
+	op _(_) : FuncName AritExpList -> AritExp [ctor] . 
+
+endfm
+
+fmod IMP-OBJECTS-SYNTAX is
+	
+	*** This module specifies the syntax of classes, to be able to create objects.
+
+	protecting IMP-FUNCTIONS-SYNTAX .
+	
+	sort Class ClassName ClassFunc .
+	subsort Qid < ClassName .
+	subsort Var < ClassVar .
+	***subsort Func < ClassFunc .
+
+	*** Syntax to write a class.
+	op class _ {_} : ClassName ClassFuncList -> Class [ctor] .
+
+	*** Define the object variables.
+	sort ClassVar .
+	subsort Var < ClassVar .
+	op _._ : ClassName Var -> ClassVar [ctor] .
+	op this ._ : Var -> ClassVar [ctor] .
+	***op _=_ : ClassVar AritExp -> Prog [ctor] .
+
+	*** Define a list of functions inside an object.
+	sort ClassFuncList . 
+	subsort ClassFunc < ClassFuncList .
+	op EmptyClassFuncList : -> ClassFuncList [ctor] .
+	op __ : ClassFuncList ClassFuncList -> ClassFuncList [ctor assoc id: EmptyClassFuncList] .
+
+	*** Syntax for the declaration of a new object.
+	op _= new _(_) : Var ClassName AritExpList -> Prog [ctor] .
+
+	*** A special function in a class is its constructor function.
+	op constructor(_) {_} : VarList Prog -> ClassFunc [ctor] .
+
+	*** The constructor function will only accept numbers as input.
+	sort NumberList .
+	subsort Int < NumberList .
+	subsort NumberList < AritExpList .
+	***op NoNumber : -> NumberList [ctor] .
+	op _,_ : NumberList NumberList -> NumberList [ctor assoc id: void] .
 
 	
-	*** Define the function call: the name of the function followed by a list 
-	*** of arithmetic expressions.
-	op _(_) : FuncName AritExpList -> AritExp [ctor] .
 
+endfm
 
-	*** Define the syntax to give each function its own Stack.
+fmod IMP-MEMORY is
+
+	*** This module specifies the memory, which will consist of a stack for the global
+	*** variables, and then a reserved stack for each object declared.
+
+	protecting IMP-OBJECTS-SYNTAX .
+
+	var c : ClassName .
+	var v : Var .
+	var M : Memory .
+	***var z : ClassVar .
+	var S : Stack .
+	vars N N' : Int .
+
+	sorts Memory MainMemory ClassMemory ThisMemory .
+	subsort MainMemory < Memory .
+	subsort ClassMemory < Memory .
+	subsort ThisMemory < Memory .
+	op EmptyMemory : -> Memory [ctor] .
+	op [main] _ : Stack -> MainMemory [ctor] .
+	op [this] _ : Stack -> ThisMemory [ctor] .
+	op [_] _ : ClassName Stack -> ClassMemory [ctor] .
+	op __ : Memory Memory -> Memory [ctor assoc comm id: EmptyMemory] .
+
+	*** Access elements in memory.
+	op _[_] : Memory Var ~> Int [ctor] .
+	*** Case of global variables.
+	eq (M [main] ( S < v, N > ) ) [v] = N .
+	*** Case of class variables from the outside.
+	eq (M [c] ( S < v, N > ) ) [ c . v ] = N .
+	*** Case of class variables from the inside.
+	eq (M [this] ( S < v, N > ) ) [ ( this . v ) ] = N .
+
+	*** Change values or add elements to memory.
+	*** Case of global variables.
+	op _[_/_] : Memory Var Int -> Memory .
+	eq (M [main] ( S < v, N >) ) [v / N'] = M [main] ( S < v, N' > ) .
+	eq (M [main] S) [v / N] = M [main] ( S < v, N > ) [owise] .
+	*** Case of class variables from the outside.
+	eq (M [c] ( S < v, N > ) ) [ c . v  / N'] = M [c] ( S < v, N' > ) .
+	eq (M [c] S) [ c . v / N] = M [c] ( S < v, N > ) [owise] .
+	*** Case of class variables from the inside.
+	eq (M [this] ( S < v, N > ) ) [ ( this . v )  / N'] = M [this] ( S < v, N' > ) .
+	eq (M [this] S) [ ( this . v ) / N] = M [this] ( S < v, N > ) [owise] .
+
+endfm
+
+fmod IMP-EXTRAS-SYNTAX is
+	
+	*** This module contains the Extra type specification (a function or a class can be extras).
+
+	protecting IMP-MEMORY .
+
 	vars v b : Var .
 	var vl : VarList .
 	var al : AritExpList .
 	var N : Int .
-	var sigma : Stack .
+	var mem : Memory .
 
-	op giveStack [___] : VarList AritExpList Stack -> Stack [ctor] .
-	eq giveStack [ ( v, vl ) ( b, al ) sigma ] = < v, sigma [ b ] > giveStack [ vl al sigma ] .
-	eq giveStack [ ( v, vl ) ( N, al ) sigma ] = < v, N > giveStack [ vl al sigma ] .
-	eq giveStack [ ( void ) ( void ) sigma ] = EmptyStack . 
+	sorts Extra ExtraList .
+	subsort Extra < ExtraList .
+	subsort Func < Extra .
+	subsort Class < Extra .
+
+	*** Combine definitions of functions and classes.
+	op EmptyExtra : -> ExtraList [ctor] .
+	op __ : ExtraList ExtraList -> ExtraList [ctor assoc comm id: EmptyExtra] .
+
+	*** Define the type Script, a Prog type followed by, possibly, a list of Extra types.
+	sort Script .
+	op main{_} : Prog -> Script [ctor] .
+	op main{_}_ : Prog ExtraList -> Script [ctor] .
+
+	*** Define the syntax to give each function its own memory when called.
+	op giveStack [___] : VarList AritExpList Memory -> Stack [ctor] .
+	eq giveStack [ ( v, vl ) ( b, al ) mem ] = < v, mem [ b ] > giveStack [ vl al mem ] .
+	eq giveStack [ ( v, vl ) ( N, al ) mem ] = < v, N > giveStack [ vl al mem ] .
+	eq giveStack [ ( void ) ( void ) mem ] = EmptyStack .
+
+	*** Operator to run the constructor function of a class and obtain a stack for it.
+	***op runConstructor [_(_) ____] : Var NumberList VarList Prog ExtraList Stack -> Stack [ctor] .
+
 
 endfm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
