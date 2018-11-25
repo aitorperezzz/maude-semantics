@@ -11,7 +11,7 @@ endfm
 
 fmod IMP-STACK is
 
-	*** This module specifies how the language keeps track of the 
+	*** This module specifies the Stack, which is a long list of 
 	*** variable-value pairs.
 
 	protecting IMP-VAR .

@@ -51,11 +51,12 @@ rew exec ( main {
 rew exec ( main 
 	{ 
 		'a = 5 ; 
-		( 'z = new 'Ball ('a) ) 
+		( 'z = new 'Ball ('a) ) ;
+		'u = ( ( 'z . 'w ) + 1 )   
 	} 
 	class 'Ball { 
-		constructor ('x) { 
-			( this . 'w ) = 'x  
+		constructor ( 'x ) { 
+			( ( this . 'w ) = 'x ) 
 		} 
 	} ) .
 

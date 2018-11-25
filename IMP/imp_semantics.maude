@@ -153,7 +153,8 @@ mod IMP-OBJECTS-SEMANTICS is
 
 	protecting IMP-FUNCTIONS-SEMANTICS .
 
-	var x : Var .
+	vars x v : Var .
+	var z : ClassVar .
 	var c : ClassName .
 	vars al al' : AritExpList .
 	var a : AritExp .
@@ -167,14 +168,21 @@ mod IMP-OBJECTS-SEMANTICS is
 	var S S' : Stack .
 
 	*** How to run the declaration of a new instance of a class.
+	*** First transform an arithmetic expression that comes as arguments to the class initialization.
 	crl [class-firsttransform] : < x = new c (al, a, al'), el, mem > => 
 		< x = new c (al, N, al'), el, mem > if < a, el, mem > => N .
+	*** Once the arguments are transformed to numbers, running the constructor means creating a personalized stack.
 	crl [class-onlynumbers] : < x = new c (nl), el class c { constructor (vl) {P} cfl }, mem > =>
 		< skip, el class c { constructor (vl) {P} cfl }, mem [ x ] S' > if 
-		giveStack[ vl nl mem ] => S /\ < P, el, [main] S [this] EmptyStack > => < skip, el, mem' [this] S' > .
+		giveStack [ vl nl mem ] => S /\ < P, el, [main] S [this] EmptyStack > => < skip, el, mem' [this] S' > .
 
-	crl [this] : < (this . v) = a, el, mem > => < skip, el, mem [ ( this . v ) / N] S > if 
+	*** Assignment of a class variable.
+	crl [class-assign] : < z = a, el, mem > => < skip, el, mem [ z / N ] > if 
 		< a, el, mem > => N .
+
+	*** Evaluation of a class variable.
+	rl [class-eval] : < z, el, mem > => mem [ z ] .
+	
 endm
 
 

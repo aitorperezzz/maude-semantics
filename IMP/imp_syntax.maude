@@ -6,9 +6,8 @@ fmod IMP-BASIC-SYNTAX is
 
 	protecting IMP-STACK .
 
-	sorts AritExp BoolExp Prog .
-
 	*** Syntax of arithmetic expressions.
+	sort AritExp .
 	subsort Var < AritExp .
 	subsort Int < AritExp .
 	op _+_ : AritExp AritExp -> AritExp [ditto] .
@@ -16,6 +15,7 @@ fmod IMP-BASIC-SYNTAX is
 	op _*_ : AritExp AritExp -> AritExp [ditto] .
 
 	*** Syntax of boolean expresions.
+	sort BoolExp .
 	ops true false : -> BoolExp [ctor] .
 	op _==_ : AritExp AritExp -> BoolExp [comm prec 26] .
 	op _!=_ : AritExp AritExp -> BoolExp [comm prec 26] .
@@ -26,6 +26,7 @@ fmod IMP-BASIC-SYNTAX is
 	op _or_ : BoolExp BoolExp -> BoolExp [assoc comm] .
 
 	*** Syntax of statements.
+	sort Prog .
 	op skip : -> Prog [ctor] .
 	op _=_ : Var AritExp -> Prog [ctor prec 30] .
 	op _;_ : Prog Prog -> Prog [ctor assoc] .
@@ -55,7 +56,6 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	*** Define the Func type.
 	sorts FuncName Func .
 	subsort Qid < FuncName .
-	***subsort Func < FuncList .
 
 	*** Specify how to declare a function.
 	op function _ = _ (_) {_} : Var FuncName VarList Prog -> Func [ctor] .
@@ -71,41 +71,38 @@ fmod IMP-OBJECTS-SYNTAX is
 
 	protecting IMP-FUNCTIONS-SYNTAX .
 	
-	sort Class ClassName ClassFunc .
+	sort Class ClassName ClassVar ClassFunc .
 	subsort Qid < ClassName .
-	subsort Var < ClassVar .
+	subsort ClassVar < AritExp .
 	***subsort Func < ClassFunc .
 
-	*** Syntax to write a class.
-	op class _ {_} : ClassName ClassFuncList -> Class [ctor] .
+	op _=_ : ClassVar AritExp -> Prog [ditto] .
 
-	*** Define the object variables.
-	sort ClassVar .
-	subsort Var < ClassVar .
+	*** Define the object's variables.
 	op _._ : ClassName Var -> ClassVar [ctor] .
 	op this ._ : Var -> ClassVar [ctor] .
-	***op _=_ : ClassVar AritExp -> Prog [ctor] .
 
-	*** Define a list of functions inside an object.
+	*** Define the object's functions.
 	sort ClassFuncList . 
 	subsort ClassFunc < ClassFuncList .
 	op EmptyClassFuncList : -> ClassFuncList [ctor] .
 	op __ : ClassFuncList ClassFuncList -> ClassFuncList [ctor assoc id: EmptyClassFuncList] .
 
-	*** Syntax for the declaration of a new object.
-	op _= new _(_) : Var ClassName AritExpList -> Prog [ctor] .
+	*** Define thes syntax to write a class.
+	op class _ {_} : ClassName ClassFuncList -> Class [ctor] .
+
+	*** Define the syntax to create a new instance of an object.
+	op _ = new _(_) : Var ClassName AritExpList -> Prog [ctor] .
 
 	*** A special function in a class is its constructor function.
 	op constructor(_) {_} : VarList Prog -> ClassFunc [ctor] .
 
-	*** The constructor function will only accept numbers as input.
+	*** Define what a list of numbers is. Will be useful for the semantics of 
+	*** running the constructor function.
 	sort NumberList .
 	subsort Int < NumberList .
 	subsort NumberList < AritExpList .
-	***op NoNumber : -> NumberList [ctor] .
 	op _,_ : NumberList NumberList -> NumberList [ctor assoc id: void] .
-
-	
 
 endfm
 
@@ -133,26 +130,49 @@ fmod IMP-MEMORY is
 	op [_] _ : ClassName Stack -> ClassMemory [ctor] .
 	op __ : Memory Memory -> Memory [ctor assoc comm id: EmptyMemory] .
 
-	*** Access elements in memory.
-	op _[_] : Memory Var ~> Int [ctor] .
-	*** Case of global variables.
-	eq (M [main] ( S < v, N > ) ) [v] = N .
-	*** Case of class variables from the outside.
-	eq (M [c] ( S < v, N > ) ) [ c . v ] = N .
-	*** Case of class variables from the inside.
-	eq (M [this] ( S < v, N > ) ) [ ( this . v ) ] = N .
 
-	*** Change values or add elements to memory.
+	*** Access elements in memory.
+	*** Global variables.
+	op _[_] : Memory Var ~> Int [ctor] .
+	eq M [ v ] = main M [ v ] .
+	*** Object variables
+	op _[_] : Memory ClassVar ~> Int [ctor] .
+	eq M [ c . v ] = object M [ c . v ] .
+	eq M [ this . v ] = this M [ this . v ] .
+
+	*** Change or add elements to memory.
+	*** Global variables.
+	op _[_/_] : Memory Var Int -> Memory [ctor] .
+	eq M [ v / N ] = main M [ v / N ] .
+	*** Object variables.
+	op _[_/_] : Memory ClassVar Int -> Memory [ctor] .
+	eq M [ ( c . v ) / N ] = object M [ ( c . v ) / N ] .
+	eq M [ ( this . v ) / N ] = this M [ ( this . v ) / N ] .
+
+	*** Access elements in memory, specific definitions.
 	*** Case of global variables.
-	op _[_/_] : Memory Var Int -> Memory .
-	eq (M [main] ( S < v, N >) ) [v / N'] = M [main] ( S < v, N' > ) .
-	eq (M [main] S) [v / N] = M [main] ( S < v, N > ) [owise] .
+	op main _[_] : Memory Var ~> Int [ctor] .
+	eq main (M [main] ( S < v, N > ) ) [v] = N .
 	*** Case of class variables from the outside.
-	eq (M [c] ( S < v, N > ) ) [ c . v  / N'] = M [c] ( S < v, N' > ) .
-	eq (M [c] S) [ c . v / N] = M [c] ( S < v, N > ) [owise] .
+	op object _[_] : Memory ClassVar ~> Int [ctor] .
+	eq object (M [c] ( S < v, N > ) ) [ ( c . v ) ] = N .
 	*** Case of class variables from the inside.
-	eq (M [this] ( S < v, N > ) ) [ ( this . v )  / N'] = M [this] ( S < v, N' > ) .
-	eq (M [this] S) [ ( this . v ) / N] = M [this] ( S < v, N > ) [owise] .
+	op this _[_] : Memory ClassVar ~> Int [ctor] .
+	eq this (M [this] ( S < v, N > ) ) [ this . v ] = N .
+
+	*** Change values or add elements to memory, specific definitions.
+	*** Case of global variables.
+	op main _[_/_] : Memory Var Int -> Memory .
+	eq main (M [main] ( S < v, N >) ) [v / N'] = M [main] ( S < v, N' > ) .
+	eq main (M [main] S) [v / N] = M [main] ( S < v, N > ) [owise] .
+	*** Case of class variables from the outside.
+	op object _[_/_] : Memory ClassVar Int -> Memory .
+	eq object (M [c] ( S < v, N > ) ) [ ( c . v )  / N'] = M [c] ( S < v, N' > ) .
+	eq object (M [c] S) [ c . v / N] = M [c] ( S < v, N > ) [owise] .
+	*** Case of class variables from the inside.
+	op this _[_/_] : Memory ClassVar Int -> Memory .
+	eq this (M [this] ( S < v, N > ) ) [ ( this . v )  / N'] = M [this] ( S < v, N' > ) .
+	eq this (M [this] S) [ ( this . v ) / N] = M [this] ( S < v, N > ) [owise] .
 
 endfm
 
@@ -188,20 +208,7 @@ fmod IMP-EXTRAS-SYNTAX is
 	eq giveStack [ ( v, vl ) ( N, al ) mem ] = < v, N > giveStack [ vl al mem ] .
 	eq giveStack [ ( void ) ( void ) mem ] = EmptyStack .
 
-	*** Operator to run the constructor function of a class and obtain a stack for it.
-	***op runConstructor [_(_) ____] : Var NumberList VarList Prog ExtraList Stack -> Stack [ctor] .
-
-
 endfm
-
-
-
-
-
-
-
-
-
 
 
 
