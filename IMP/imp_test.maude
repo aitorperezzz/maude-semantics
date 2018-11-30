@@ -6,9 +6,10 @@ rew exec main
 		'a = 10 ; 
 		'times = 5 ; 
 		'result = 0 ; 
-		while 'times geq 1 do 
+		while ('times geq 1) {  
 			'result = ( 'result + 'a ) ; 
-			'times = ( 'times - 1 )
+			'times = ( 'times - 1 ) 
+		}
 	} .
 
 
@@ -17,33 +18,37 @@ rew exec ( main
 	{
 		'a = 10 ; 
 		'b = 5 ;
-		'c = ( 'sum ( 'a, 'b ) ) 
+		'c = 'sum ( 'a, 'b )  
 	}
-	function 'z = 'sum ( 'x, 'y ) {
-			'z = ( 'x + 'y ) 
+	function 'sum ( 'x, 'y ) {
+			return ( 'x + 'y ) 
 	} ) .
 
 rew exec ( main { 
-		'n = 5 ; 
-		'f = ( 'factorial('n) ) 
-	}  
-	function 'z = 'factorial('integer) { 
-		if 'integer geq 2 then 
-			'z = ( 'integer * ( 'factorial('integer - 1) ) ) 
-		else 
-			'z = 1 
+		'n = 3 ; 
+		( 'f = 'factorial ('n) ) 
+	} 
+	function 'factorial ('integer) { 
+		if ('integer geq 2) { 
+			return ( 'integer * ( 'factorial ( 'integer - 1 ) ) )   
+		} 
+		else {  
+			return 1 
+		} 
 	} ) .
+
+***(
 
 rew exec ( main { 
 		'a = 5 ; 
-		'b = ( 'sum('a, 1) ) ;
-		'c = ( 'product('b, ('sum('a, 2))) )  
+		( 'b = 'sum('a, 1) ) ; 
+		( 'c = 'product ( 'b, ('sum('a, 2) ) ) )   
 	}
-	function 'z = 'sum ('x, 'y) { 
-		'z = ('x + 'y) 
+	function 'sum ('x, 'y) { 
+		return ('x + 'y ) 
 	}
-	function 'w = 'product('x, 'y) { 
-		'w = ( 'x * 'y ) 
+	function 'product('x, 'y) { 
+		return ( 'x * 'y ) 
 	} ) .
 
 
@@ -60,7 +65,7 @@ rew exec ( main
 		} 
 	} ) .
 
-
+)
 
 
 

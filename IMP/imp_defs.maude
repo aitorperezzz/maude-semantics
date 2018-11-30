@@ -1,0 +1,436 @@
+fmod IMP-BASICS is
+
+	*** This module defines the basic sorts and syntax.
+
+	protecting QID .
+	protecting INT .
+
+	*** Define the types relevant to the language.
+	sorts NumVar Object ObjectVar Var .
+	subsort Qid < NumVar .
+	subsort Qid < Object .
+	subsort NumVar < Var .
+	subsort ObjectVar < Var .
+
+	*** Define the arithmetic expressions.
+	sort AritExp .
+	subsort Int < AritExp .
+	subsort Var < AritExp .
+	***subsort ObjectVar < AritExp .
+	op _+_ : AritExp AritExp -> AritExp [ditto] .
+	op _-_ : AritExp AritExp -> AritExp [ditto] .
+	op _*_ : AritExp AritExp -> AritExp [ditto] .
+
+	*** Define the boolean expressions.
+	sort BoolExp .
+	ops true false : -> BoolExp [ctor] .
+	op _==_ : AritExp AritExp -> BoolExp [comm prec 26] .
+	op _!=_ : AritExp AritExp -> BoolExp [comm prec 26] .
+	op _leq_ : AritExp AritExp -> BoolExp .
+	op _geq_ : AritExp AritExp -> BoolExp .
+	op not_ : BoolExp -> BoolExp .
+	op _and_ : BoolExp BoolExp -> BoolExp [assoc comm] .
+	op _or_ : BoolExp BoolExp -> BoolExp [assoc comm] .
+
+	*** Define the statement type.
+	sort Prog .
+	op skip : -> Prog [ctor] .
+	op _=_ : Var AritExp -> Prog [ctor prec 30] .
+	op _;_ : Prog Prog -> Prog [ctor assoc] .
+	op if (_) {_} else {_} : BoolExp Prog Prog -> Prog [ctor] .
+	op while (_) {_} : BoolExp Prog -> Prog [ctor] .
+	op return _ : AritExp -> Prog [ctor] .
+
+endfm
+
+fmod IMP-FUNCTIONS-DEF is
+	
+	*** This module gives some definitions for the functions.
+
+	protecting IMP-BASICS .
+
+	*** Define what can be used to declare a function, which are variables or objects.
+	sorts Input InputList .
+	subsort Input < InputList .
+	subsort Object < Input .
+	subsort NumVar < Input .
+	op void : -> InputList [ctor] .
+	op _,_ : InputList InputList -> InputList [ctor assoc id: void] .
+
+	*** Define a list of what can be passed to a function: an arithmetic expression 
+	*** or an object.
+	sorts Arg ArgList .
+	subsort Arg < ArgList .
+	subsort InputList < ArgList .
+	subsort AritExp < Arg .
+	subsort Object < Arg .
+	op _,_ : ArgList ArgList -> ArgList [ditto] .
+
+	*** Define the Func type.
+	sorts FuncName Func FuncCall .
+	subsort Qid < FuncName .
+
+	*** Specify how to declare a function.
+	op function _ (_) {_} : FuncName InputList Prog -> Func [ctor] .
+	
+	*** There are three ways to call a function.
+	op _=_(_) : Var FuncName ArgList -> Prog [ctor] .
+	op _(_) : FuncName ArgList -> AritExp [ctor] .
+	op run _(_) : FuncName ArgList -> Prog [ctor] .
+
+	*** Define a list of functions.
+	sort FuncList .
+	subsort Func < FuncList .
+	op NoFunc : -> FuncList [ctor] .
+	op __ : FuncList FuncList -> FuncList [ctor assoc comm id: NoFunc] .
+
+endfm
+
+fmod IMP-OBJECTS-DEF is
+
+	*** This module gives some definitions for the objects.
+
+	protecting IMP-FUNCTIONS-DEF .
+
+	sorts Class ClassName .
+	subsort Qid < ClassName .
+
+	*** Define the list of functions that defines a class.
+	***sort ClassFuncList .
+	***subsort ClassFunc < ClassFuncList .
+	op constructor(_) {_} : ArgList Prog -> Func [ctor] .
+	***op EmptyClassFuncList : -> ClassFunc [ctor] .
+	***op __ : ClassFuncList ClassFuncList -> ClassFuncList [ctor assoc comm id: EmptyClassFuncList] .
+
+	*** Declare a class
+	op class _ {_} : ClassName FuncList -> Class [ctor] .
+
+	*** A list of class definitions at the end of a Script.
+	sort ClassList .
+	subsort Class < ClassList .
+	op NoClass : -> ClassList [ctor] .
+	op __ : ClassList ClassList -> ClassList [ctor assoc comm id: NoClass] .
+
+	*** Create an object with a defined class.
+	op _ = new _ (_) : Object ClassName ArgList -> Prog [ctor] .
+
+	*** How to call object variables.
+	op this : -> Object [ctor] .
+	***op this . _ : NumVar -> ObjectVar [ctor] .
+	op _ . _ : Object NumVar -> ObjectVar [ctor] .
+
+	*** How to call object functions.
+	op _ = this . _ (_) : Var FuncName ArgList -> Prog [ctor] . 
+	op _ = _ . _ (_) : Var Object FuncName ArgList -> Prog [ctor] .
+	op this . _ (_) : FuncName ArgList -> Prog [ctor] . 
+	op _ . _ (_) : Object FuncName ArgList -> Prog [ctor] .
+
+	*** A class function can be called as is, or asking for a returning value.
+	***op _ : ClassFuncCall -> Prog .
+	***op _=_ : Var ClassFuncCall -> Prog .
+
+	*** Define an object identifier.
+	sort ObjectId .
+	op [_;_] : Object NumVar -> ObjectId [ctor] .
+	op None : -> ObjectId [ctor] .
+
+endfm
+
+fmod IMP-STACK is
+
+	*** This module specifies the Stack, which is a long list of 
+	*** variable-value pairs.
+
+	protecting IMP-OBJECTS-DEF .
+
+	var S : Stack .
+	vars v v' : Var .
+	vars N N' : Int .
+
+	sorts StackCell Stack .
+	subsort StackCell < Stack .
+
+	op <_,_> : Var Int -> StackCell [ctor] .
+
+	op EmptyStack : -> Stack [ctor] .
+	op __ : Stack Stack -> Stack [ctor comm assoc id: EmptyStack] .
+
+	*** Change values or add elements to the stack.
+	op _[_/_] : Stack Var Int -> Stack .
+	eq (S < v, N >) [v / N'] = S < v, N' > .
+	eq S [v / N] = S < v, N > [owise] .
+
+	*** Access the value of a variable in the stack, if it is there.
+	op _[_] : Stack Var ~> Int .
+	eq (S < v, N >) [v] = N .
+
+endfm
+
+fmod IMP-MEMORY is
+	
+	*** This module specifies the Memory: first a Stack of main variables followed by a 
+	*** Stack for each object defined.
+
+	protecting IMP-STACK .
+
+	var c : ClassName .
+	var o : Object .
+	var z : ObjectVar .
+	var v : NumVar .
+	var M : Memory .
+	var S : Stack .
+	vars N N' : Int .
+
+	sorts Memory MainMemory ClassMemory .
+	subsort MainMemory < Memory .
+	subsort ClassMemory < Memory .
+	***subsort ThisMemory < Memory .
+	op NoMemory : -> Memory [ctor] .
+	op [main] _ : Stack -> MainMemory [ctor] .
+	***op [ this ; _] _ : ClassName Stack -> ThisMemory [ctor] .
+	op __ : ObjectId Stack -> ClassMemory [ctor] .
+	op __ : Memory Memory -> Memory [ctor assoc comm id: NoMemory] .
+	eq NoMemory = ( [main] EmptyStack ) .
+
+	*** Access elements in memory.
+	*** Global variables.
+	op _[_] : Memory NumVar ~> Int [ctor] .
+	eq M [ v ] = main M [ v ] .
+	*** Object variables
+	op _[_] : Memory ObjectVar ~> Int [ctor] .
+	eq M [ o . v ] = object M [ o . v ] .
+	***eq M [ this . v ] = this M [ this . v ] .
+
+	*** Change or add elements to memory.
+	*** Global variables.
+	op _[_/_] : Memory NumVar Int -> Memory [ctor] .
+	eq M [ v / N ] = main M [ v / N ] .
+	*** Object variables.
+	op _[_/_] : Memory ObjectVar Int -> Memory [ctor] .
+	eq M [ ( o . v ) / N ] = object M [ ( o . v ) / N ] .
+	***eq M [ ( this . v ) / N ] = this M [ ( this . v ) / N ] .
+
+	*** Access elements in memory, specific definitions.
+	*** Case of global variables.
+	op main _[_] : Memory NumVar ~> Int [ctor] .
+	eq main (M [main] ( S < v, N > ) ) [v] = N .
+	*** Case of other objects's variables.
+	op object _[_] : Memory ObjectVar ~> Int [ctor] .
+	eq object (M [ o ; c ] ( S < v, N > ) ) [ ( o . v ) ] = N .
+	*** Case of object's own variables.
+	***op this _[_] : Memory ObjectVar ~> Int [ctor] .
+	***eq this (M [ this ; c ] ( S < v, N > ) ) [ ( this . v ) ] = N .
+
+	*** Change values or add elements to memory, specific definitions.
+	*** Case of global variables.
+	op main _[_/_] : Memory NumVar Int -> Memory .
+	eq main (M [main] (S < v, N >) ) [v / N'] = M ( [main] (S < v, N' > ) ) .
+	eq main (M [main] S) [v / N] = M ( [main] ( S < v, N > ) ) [owise] .
+	*** Case of other objects' variables.
+	op object _[_/_] : Memory ObjectVar Int -> Memory .
+	eq object (M [o ; c] ( S < v, N > ) ) [ ( o . v )  / N'] = M [o ; c] (S < v, N' >) .
+	eq object (M [o ; c] S) [ o . v / N] = M [o ; c] ( S < v, N > ) [owise] .
+	*** Case of object's own variables.
+	***op this _[_/_] : Memory ObjectVar Int -> Memory .
+	***eq this (M [this ; c] ( S < v, N > ) ) [ ( this . v )  / N'] = M [this ; c] ( S < v, N' > ) .
+	***eq this (M [this ; c] S) [ ( this . v ) / N] = M [this ; c] ( S < v, N > ) [owise] .
+
+endfm
+
+fmod IMP-FUNCBLOCKS is
+	
+	*** This module defines the function blocks and gives operators to manipulate them.
+	*** The design is similar to Memory.
+
+	protecting IMP-MEMORY .
+
+	var fb : FuncBlock .
+	vars v v' o o' : Qid .
+	var c : ClassName .
+	var fl : FuncList .
+
+	sort FuncBlock .
+	op [main] _ : FuncList -> FuncBlock [ctor] .
+	op  __ : ObjectId FuncList -> FuncBlock [ctor] .
+	op NoFuncBlock : -> FuncBlock [ctor] .
+	op __ : FuncBlock FuncBlock -> FuncBlock [ctor assoc comm id: NoFuncBlock] .
+
+	*** Access a certain function block belonging to some variable.
+	op _[_;_] : FuncBlock Qid Qid -> FuncBlock [ctor] .
+	eq (fb [ o ; c ] fl) [ o ; o' ] = [ o' ; c ] fl .
+	eq (fb) [ v ; v' ] = NoFuncBlock [owise] .
+
+endfm
+
+fmod IMP-SCRIPT is
+
+	*** Define a script and related syntax.
+
+	protecting IMP-FUNCBLOCKS .
+
+	*** Define a script
+	sort Script .
+	op main{_} : Prog -> Script [ctor] .
+	op main{_}_ : Prog FuncList -> Script [ctor] .
+	op main{_}_ : Prog ClassList -> Script [ctor] .
+	op main{_}__ : Prog FuncList ClassList -> Script [ctor] .
+
+	*** Define an execution.
+	sort Execution AritExecution BoolExecution .
+	subsort AritExp < AritExecution .
+	subsort BoolExp < BoolExecution .
+	op exec _ : Script -> Execution [ctor] .
+	op <_,_,_,_> : Prog FuncBlock ClassList Memory -> Execution [ctor] .
+	op <_,_,_,_> : AritExp FuncBlock ClassList Memory -> AritExecution [ctor] .
+	op <_,_,_,_> : BoolExp FuncBlock ClassList Memory -> BoolExecution [ctor] .
+
+endfm
+
+fmod IMP-GIVEMEMORY is
+	
+	*** Definition of the giveMemory operator.
+
+	protecting IMP-SCRIPT .
+
+	var n : Int .
+	vars P : Prog .
+	vars M M' : Memory .
+	var v : NumVar .
+	vars z z' : Var .
+	var oi : ObjectId .
+	var o o' : Object .
+	var c : ClassName .
+	var f : FuncName .
+	var i : Input .
+	var il : InputList .
+	var ar : Arg .
+	var arl arl' : ArgList .
+	var S : Stack .
+	var fb : FuncBlock .
+	var cl : ClassList .
+
+	op giveMemory [_____;_/_] : InputList ArgList ObjectId FuncBlock ClassList Memory Memory -> Memory [ctor] .
+
+	*** If an object called the function, add its stack of memory.
+	eq giveMemory [ il arl [ o ; c ] fb cl ; ( M ( [ o ; c ] S ) ) / M' ] = 
+		giveMemory [ il arl None fb cl ; ( M ( [ o ; c ] S ) ) / ( M' ( [ this ; c ] S ) ) ] .
+	
+	*** Give memory if the input is a number or an object.
+	eq giveMemory [ ( v, il ) ( n, arl ) None fb cl ; M / M' ] = 
+		giveMemory [ ( il ) ( arl ) None fb cl ; M / ( M' [ v / n ] ) ] .
+	eq giveMemory [ ( o' , il ) ( o , arl ) None fb cl ; (M ( [ o ; c ] S ) ) / M' ] = 
+		giveMemory [ (il) (arl) None fb cl ; (M [ o ; c ] S) / (M' ( [ o' ; c ] S ) ) ] .
+
+	
+	***eq giveMemory [ void void [ this ; c ] fb cl ; ( M [ this ; c ] S) / M' ] = 
+	***	giveMemory [ void void None fb cl ; ( M [ this ; c ] S) / ( M ( [ this ; c ] S ) ) ] .
+	
+	*** Lastly, when all arguments are parsed, return the final memory
+	eq giveMemory [ void void None fb cl ; M / M' ] = M' .
+	
+endfm
+
+fmod IMP-GIVEFUNCTIONS is
+	
+	protecting IMP-GIVEMEMORY .
+
+	var n : Int .
+	vars q q' : Qid .
+	var z : Var .
+	vars il il' : InputList .
+	var i : Input .
+	var ar : Arg .
+	vars arl arl' : ArgList .
+	var oi : ObjectId .
+	vars fb fb' : FuncBlock .
+	vars o o' : Object .
+	var c : ClassName .
+	var fl : FuncList .
+	var cl : ClassList .
+	var M : Memory .
+
+	op giveFunctions [_____;_/_] : InputList ArgList ObjectId ClassList Memory FuncBlock FuncBlock -> FuncBlock [ctor] .
+
+	*** If it is a method called by an object, give it its own methods as this.
+	eq [givefunc-this] : giveFunctions [ il arl [ o ; c ] cl M ; ( fb ( [ o ; c ] fl ) ) / fb' ] =
+		giveFunctions [ il arl None cl M ; ( fb ( [ o ; c ] fl ) ) / ( fb' ( [ this ; c ] fl ) ) ] .
+
+	*** For every input passed, ask the funcion block operator to return the function block.
+	eq [givefunc-number] : giveFunctions [ ( q', il ) ( n, arl ) None cl M ; fb / fb' ] =
+		giveFunctions [ il arl None cl M ; fb / fb' ] .
+	eq [givefunc-object] : giveFunctions [ (q', il) (q, arl) None cl M ; fb / fb' ] =
+		giveFunctions [ il arl None cl M ; fb / fb' (fb' [ q ; q' ]) ] .
+
+	*** Always pass the main functions and end the process.
+	eq [givefunc-main] : giveFunctions [ void void None cl M ; (fb [main] fl) / fb' ] = 
+		fb' [main] fl .
+
+	*** End the process.
+	***eq [givefunc-final] : giveFunctions [ void void None ; fb / fb' ] = fb' .
+
+endfm
+
+fmod IMP-AFTEREXECUTION is
+	
+	*** Defines the operators to run after a function executes.
+
+	protecting IMP-GIVEFUNCTIONS .
+
+	var o : Object .
+	var c : ClassName .
+	vars M M' : Memory .
+	vars S S' : Stack .
+
+	*** Has a previous memory and a recently created memory and updates the previous one.
+	op afterExecution [_;_/_] : ObjectId Memory Memory -> Memory [ctor] .
+
+	*** If an object called a method, update that object first.
+	eq afterExecution [ [ o ; c ] ; (M [ o ; c ] S) / (M' [ this ; c ] S') ] = 
+		afterExecution [ None ; (M [ o ; c ] S') / M' ] .
+	
+	*** Update the rest of the objects involved, recursively.
+	eq afterExecution [ None ; (M [ o ; c ] S) / (M' [ o ; c ] S') ] = 
+		afterExecution [ None ; (M [ o ; c ] S') / M' ] .
+
+	*** Final step.
+	eq afterExecution [ None ; M / NoMemory ] = M .
+	eq afterExecution [ None ; M / ( [main] S) ] = M .
+
+endfm
+
+***(
+
+fmod IMP-FUNCTIONCALLS is
+
+	*** Define how memory is given during a function call.
+
+	protecting IMP-SCRIPT .
+
+	*** Give a Memory block for a function execution.
+	*** This giveMemory function's last argument is an identifier if the function requesting
+	*** memory belings to an object or not.
+	op giveMemory [__[_;_]] (_ to _) : VarList AritExpList Object ClassName Memory Memory -> Memory [ctor] .
+	op None : -> Object [ctor] .
+
+	eq giveMemory [ vl al [o ; c] ] (M to EmptyMemory) = giveMemory [ vl al [o ; c] ] ([main] EmptyStack [this ; c] EmptyStack) .
+	eq giveMemory [ (v, vl) (a, al) M ( [o ; c] ) ] (M') = 
+		giveMemory [ vl al M [o ; c] ] (M' [ v / M [a] ]) .
+	eq giveMemory [ (v, vl) (o, al) ( M [ o ; c ] S ) ( [o' ; c'] ) ] (M') = 
+		giveMemory [ vl al ( M [ o ; c ] S ) ( [o' ; c'] ) ] (M' [ o ; c ] S) .
+	eq giveMemory [ (v, vl) (o . v, al) ( M [ o ; c ] S < v, N > ) ( [o' ; c'] ) ] (M') = 
+		giveMemory [ vl al ( M [ o ; c ] S < v, N > ) ( [o' ; c'] ) ] (M' [ v / N ]) .
+	eq giveMemory [ (v, vl) (this . v, al) ( M [ this ; c ] S < v, N > ) ( [o' ; c'] ) ] (M') = 
+		giveMemory [ vl al ( M [ this ; c ] S < v, N > ) ( [o' ; c'] ) ] (M' [ v / N ]) .
+	eq giveMemory [ void void M None ] (M') = M' .
+	eq giveMemory [ void void (M [o ; c] S) ( [o' ; c'] ) ] (M') = M' [this ; c] S . 
+
+
+endfm  )
+
+
+
+
+
+
+
+

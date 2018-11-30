@@ -1,121 +1,175 @@
-load imp_syntax.maude .
+load imp_defs.maude .
+
+mod IMP-INITIALPARSE is
+	
+	*** Define the initial parsing rules.
+
+	protecting IMP-AFTEREXECUTION .
+
+	var t : Script .
+	vars P P' : Prog .
+	var f : FuncName .
+	var il : InputList .
+	vars fl fl' : FuncList .
+	vars cl cl' : ClassList .
+	var M : Memory .
+	var fb : FuncBlock .
+	var c : ClassName .
+
+	op parse [_,_,_] : FuncList ClassList Execution -> Execution [ctor] .
+
+	*** Complete the execution statement in case the user has not given all information.
+	rl [exec-nofunc] : exec ( main {P} ( cl ) ) => exec ( main {P} NoFunc cl ) .
+	rl [exec-noclass] : exec ( main {P} fl ) => exec ( main {P} fl NoClass ) .
+	rl [exec-nothing] : exec ( main {P} ) => exec ( main {P} NoFunc NoClass ) .
+
+	rl [parse-init] : exec ( main {P} fl cl ) => parse [ fl, cl, < P, [main] ( NoFunc ), NoClass, NoMemory > ] .
+	rl [parse-function] : parse [ ( fl function f (il) {P'} ), cl, < P, [main] fl', cl', M > ] => 
+		parse [ fl, cl, < P, ( [main] ( fl' function f (il) {P'} ) ), cl', M > ] .
+	rl [parse-class] : parse [ fl, ( cl class c {fl'} ), < P, fb, cl', M > ] => 
+		parse [ fl, cl, < P, fb, ( cl' class c {fl'} ), M > ] .
+
+	*** Finally, give a semantic execution when thre's no functions or classes left.
+	rl [parse-final] : parse [ NoFunc, NoClass, < P, fb, cl, M > ] => < P, fb, cl, M > .
+
+endm
 
 mod IMP-BASIC-SEMANTICS is
 
-	*** In this module, the rewrite rules for the IMP language are specified.
+	*** In this module, the basic rewrite rules for the IMP language are specified.
 
-	protecting IMP-EXTRAS-SYNTAX .
+	protecting IMP-INITIALPARSE .
 
-	sorts Execution AritResult BoolResult .
-	subsort AritExp < AritResult .
-	subsort BoolExp < BoolResult .
-	op exec_ : Script -> Execution [ctor] .
-	op exec_with_ : Script Stack -> Execution [ctor] .
-	op <_,_,_> : Prog ExtraList Memory -> Execution [ctor] .
-	op <_,_,_> : AritExp ExtraList Memory -> AritResult [ctor] .
-	op <_,_,_> : BoolExp ExtraList Memory -> BoolResult [ctor] .
-
-	vars N M : Int .
+	vars n m : Int .
 	vars b b' : BoolExp .
-	vars sigma sigma' sigma'' : Stack .
-	vars mem mem' mem'' : Memory .
-	vars v v' : Var .
+	vars M M' M'' : Memory .
+	vars z z' : Var .
 	vars A B : AritExp .
 	vars P P' : Prog .
-	var el : ExtraList .
-	var S : Script .
-	var z : ClassVar .
+	var fb : FuncBlock .
+	var cl : ClassList .
+	var o : Object .
 
-	*** Transform a user's input into something understandable by the 
-	*** semantics of the language.
-	rl [exec-default] : exec S => exec S with EmptyStack .
-	rl [exec-nofunctions] : exec main {P} with sigma => < P, EmptyExtra, [main] sigma > .
-	rl [exec-functions] : exec ( main {P} el ) with sigma => < P, el, [main] sigma > .
-	
+	*** Evaluation of a number.
+	rl [numbers] :  < n, fb, cl, M > => n .
 
-	*** Evaluation of a number in a certain state of memory.
-	rl [numbers] :  < N, el, mem > => N .
-
-	*** Evaluation of a variable in a certain state of memory.
-	rl [var] : < v, el, mem > => mem [v] .
+	*** Evaluation of a variable.
+	rl [var] : < z, fb, cl, M > => M [z] .
 
 	*** Evaluation of arithmetic expressions.
-	crl [arit-sum] : < A + B, el, mem > => N + M
-		if < A, el, mem > => N /\ < B, el, mem > => M .
+	crl [arit-sum] : < A + B, fb, cl, M > => n + m
+		if < A, fb, cl, M > => n /\ < B, fb, cl, M > => m .
 
-	crl [arit-sub] : < A - B, el, mem > => N - M
-		if < A, el, mem > => N /\ < B, el, mem > => M .
+	crl [arit-sub] : < A - B, fb, cl, M > => n - m
+		if < A, fb, cl, M > => n /\ < B, fb, cl, M > => m .
 
-	crl [arit-prod] : < A * B, el, mem > => N * M
-		if < A, el, mem > => N /\ < B, el, mem > => M .
+	crl [arit-prod] : < A * B, fb, cl, M > => n * m
+		if < A, fb, cl, M > => n /\ < B, fb, cl, M > => m .
 
 
 	*** Evaluation of boolean expressions
-	rl [true] : < true, el, mem > => true .
-	rl [false] : < false, el, mem > => false .
+	rl [true] : < true, fb, cl, M > => true .
+	rl [false] : < false, fb, cl, M > => false .
 
-	crl [bool-equal-true] : < A == B, el, mem > => < true, el, mem >
-		if < A, el, mem > => N /\ < B, el, mem > => N .
-	crl [bool-equal-false] : < A == B, el, mem > => < false, el, mem >
-		if < A, el, mem > => M /\  < B, el, mem > => N /\ M =/= N .
-	crl [bool-diff-true] : < A != B, el, mem > => < true, el, mem >
-		if < A == B, el, mem > => < false, el, mem > .
-	crl [bool-diff-false] : < A != B, el, mem > => < false, el, mem > 
-		if < A == B, el, mem > => < true, el, mem > .
+	crl [bool-equal-true] : < A == B, fb, cl, M > => < true, fb, cl, M >
+		if < A, fb, cl, M > => m /\ < B, fb, cl, M > => m .
+	crl [bool-equal-false] : < A == B, fb, cl, M > => < false, fb, cl, M >
+		if < A, fb, cl, M > => m /\  < B, fb, cl, M > => n /\ m =/= n .
+	crl [bool-diff-true] : < A != B, fb, cl, M > => < true, fb, cl, M >
+		if < A == B, fb, cl, M > => < false, fb, cl, M > .
+	crl [bool-diff-false] : < A != B, fb, cl, M > => < false, fb, cl, M > 
+		if < A == B, fb, cl, M > => < true, fb, cl, M > .
 
-	crl [leq-true] : < A leq B, el, mem > => < true, el, mem >
-		if < A, el, mem > => M  /\  < B, el, mem > => N /\ M <= N .
-	crl [leq-false] : < A leq B, el, mem > => < false, el, mem >
-		if < A, el, mem > => M /\ < B, el, mem > => N /\ M > N .
-	crl [geq-true] : < A geq B, el, mem > => < true, el, mem >
-		if < A, el, mem > => M /\ < B, el, mem > => N /\ M >= N .
-	crl [geq-false] : < A geq B, el, mem > => < false, el, mem >
-		if < A, el, mem > => M /\ < B, el, mem > => N /\ M < N .
+	crl [leq-true] : < A leq B, fb, cl, M > => < true, fb, cl, M >
+		if < A, fb, cl, M > => m  /\  < B, fb, cl, M > => n /\ m <= n .
+	crl [leq-false] : < A leq B, fb, cl, M > => < false, fb, cl, M >
+		if < A, fb, cl, M > => m /\ < B, fb, cl, M > => n /\ m > n .
+	crl [geq-true] : < A geq B, fb, cl, M > => < true, fb, cl, M >
+		if < A, fb, cl, M > => m /\ < B, fb, cl, M > => n /\ m >= n .
+	crl [geq-false] : < A geq B, fb, cl, M > => < false, fb, cl, M >
+		if < A, fb, cl, M > => m /\ < B, fb, cl, M > => n /\ m < n .
 
-	crl [bool-not-true] : < not b, el, mem > => < true, el, mem >
-		if < b, el, mem > => < false, el, mem > .
-	crl [bool-not-false] : < not b, el, mem > => < false, el, mem >
-		if < b, el, mem > => < true, el, mem > .
+	crl [bool-not-true] : < not b, fb, cl, M > => < true, fb, cl, M >
+		if < b, fb, cl, M > => < false, fb, cl, M > .
+	crl [bool-not-false] : < not b, fb, cl, M > => < false, fb, cl, M >
+		if < b, fb, cl, M > => < true, fb, cl, M > .
 
-	crl [bool-or-true] : < b or b', el, mem > => < true, el, mem >
-		if < b, el, mem > => < true, el, mem > /\ < b', el, mem > => < true, el, mem > .
-	crl [bool-or-true] : < b or b', el, mem > => < true, el, mem >
-		if < b, el, mem > => < true, el, mem > /\ < b', el, mem > => < false, el, mem > .
-	crl [bool-or-true] : < b or b', el, mem > => < true, el, mem >
-		if < b, el, mem > => < false, el, mem > /\ < b', el, mem > => < true, el, mem > .
-	crl [bool-or-false] : < b or b', el, mem > => < false, el, mem >
-		if < b, el, mem > => < false, el, mem > /\ < b', el, mem > => < false, el, mem > .
+	crl [bool-or-true] : < b or b', fb, cl, M > => < true, fb, cl, M >
+		if < b, fb, cl, M > => < true, fb, cl, M > /\ < b', fb, cl, M > => < true, fb, cl, M > .
+	crl [bool-or-true] : < b or b', fb, cl, M > => < true, fb, cl, M >
+		if < b, fb, cl, M > => < true, fb, cl, M > /\ < b', fb, cl, M > => < false, fb, cl, M > .
+	crl [bool-or-true] : < b or b', fb, cl, M > => < true, fb, cl, M >
+		if < b, fb, cl, M > => < false, fb, cl, M > /\ < b', fb, cl, M > => < true, fb, cl, M > .
+	crl [bool-or-false] : < b or b', fb, cl, M > => < false, fb, cl, M >
+		if < b, fb, cl, M > => < false, fb, cl, M > /\ < b', fb, cl, M > => < false, fb, cl, M > .
 
-	crl [bool-and-true] : < b and b', el, mem > => < true, el, mem >
-		if < b, el, mem > => < true, el, mem > /\ < b', el, mem > => < true, el, mem > .
-	crl [bool-and-false] : < b and b', el, mem > => < false, el, mem >
-		if < b, el, mem > => < false, el, mem > /\ < b', el, mem > => < true, el, mem > .
-	crl [bool-and-false] : < b and b', el, mem > => < false, el, mem >
-		if < b, el, mem > => < true, el, mem > /\ < b', el, mem > => < false, el, mem > .
-	crl [bool-and-false] : < b and b', el, mem > => < false, el, mem >
-		if < b, el, mem > => < false, el, mem > /\ < b', el, mem > => < false, el, mem > .
+	crl [bool-and-true] : < b and b', fb, cl, M > => < true, fb, cl, M >
+		if < b, fb, cl, M > => < true, fb, cl, M > /\ < b', fb, cl, M > => < true, fb, cl, M > .
+	crl [bool-and-false] : < b and b', fb, cl, M > => < false, fb, cl, M >
+		if < b, fb, cl, M > => < false, fb, cl, M > /\ < b', fb, cl, M > => < true, fb, cl, M > .
+	crl [bool-and-false] : < b and b', fb, cl, M > => < false, fb, cl, M >
+		if < b, fb, cl, M > => < true, fb, cl, M > /\ < b', fb, cl, M > => < false, fb, cl, M > .
+	crl [bool-and-false] : < b and b', fb, cl, M > => < false, fb, cl, M >
+		if < b, fb, cl, M > => < false, fb, cl, M > /\ < b', fb, cl, M > => < false, fb, cl, M > .
 
 
-	*** Evaluation of programs
-	crl [prog-assign] : < v = A, el, mem > => < skip, el, mem[v / N] >
-		if < A, el, mem > => N .
+	*** Execution of programs
+	crl [prog-assign] : < z = A, fb, cl, M > => < skip, fb, cl, M[z / n] >
+		if < A, fb, cl, M > => n .
 
-	crl [prog-comp] : < P ; P', el, mem > => < skip, el, mem' >
-		if < P, el, mem > => < skip, el, mem'' > /\
-		< P', el, mem'' > => < skip, el, mem' > .
+	crl [prog-comp] : < P ; P', fb, cl, M > => < skip, fb, cl, M' >
+		if < P, fb, cl, M > => < skip, fb, cl, M'' > /\
+		< P', fb, cl, M'' > => < skip, fb, cl, M' > .
 
-	crl [prog-if-true] : < if b then P else P', el, mem > => < P, el, mem >
-		if < b, el, mem > => < true, el, mem > .
-	crl [prog-if-false] : < if b then P else P', el, mem > => < P', el, mem >
-		if < b, el, mem > => < false, el, mem > .
+	crl [prog-if-true] : < if (b) {P} else {P'}, fb, cl, M > => < P, fb, cl, M >
+		if < b, fb, cl, M > => < true, fb, cl, M > .
+	crl [prog-if-false] : < if (b) {P} else {P'}, fb, cl, M > => < P', fb, cl, M >
+		if < b, fb, cl, M > => < false, fb, cl, M > .
 
-	crl [prog-while-true] : < while b do P, el, mem > => < skip, el, mem' >
-		if < b, el, mem > => < true, el, mem > /\
-		< P ; while b do P, el, mem > => < skip, el, mem' > .
-	crl [prog-while-false] : < while b do P, el, mem > => < skip, el, mem >
-		if < b, el, mem > => < false, el, mem > .
+	crl [prog-while-true] : < while (b) {P}, fb, cl, M > => < skip, fb, cl, M' >
+		if < b, fb, cl, M > => < true, fb, cl, M > /\
+		< P ; while (b) {P}, fb, cl, M > => < skip, fb, cl, M' > .
+	crl [prog-while-false] : < while (b) {P}, fb, cl, M > => < skip, fb, cl, M >
+		if < b, fb, cl, M > => < false, fb, cl, M > .
 
 endm
+
+
+***(
+mod IMP-AFTEREXECUTION is
+	
+	*** After a function is called, if it received any object, its variables have to be updated.
+
+	protecting IMP-GIVEFUNCTIONS .
+
+	var z : Var .
+	var il : InputList .
+	var ar : Arg .
+	var arl : ArgList .
+	var oi : ObjectId .
+	vars fb fb' : FuncBlock .
+	vars o o' : Object .
+	var c : ClassName .
+	var fl : FuncList .
+
+	*** This operator receives a final memory (after a function is executed) and a previous 
+	*** memory and updates the relevant items.
+	op afterExecution [___;_/_] : InputList ArgList ObjectId Memory Memory -> Memory [ctor] .
+
+	*** If it received a variable, nothing has to be changed.
+	rl [update-vars] : afterExecution [ (v, il) (ar, arl) oi ; M' / M ] => 
+		afterExecution [ il arl oi ; M' / M ] .
+
+	*** If it received an object, that object has to be updated.
+	rl [update-objects] : afterExecution [ (o, il) (o', arl) oi ; (M' [ o ; c ] S') / (M [ o' ; c] S) ] => 
+		afterExecution [ il arl oi ; (M' [ o ; c ] S') / (M [ o' ; c] S') ] .
+
+	*** Update object's variables if an object called its own method.
+	rl [update-this] : afterExecution [ void void [ this ; c ] ; (M' [ o ; c ] S') / (M [ o' ; c] S) ] => 
+		afterExecution [ il arl oi ; (M' [ o ; c ] S') / (M [ o' ; c] S') ] .
+
+endm 
+)
 
 mod IMP-FUNCTIONS-SEMANTICS is
 	
@@ -123,43 +177,91 @@ mod IMP-FUNCTIONS-SEMANTICS is
 
 	protecting IMP-BASIC-SEMANTICS .
 
-	var N : Int .
-	vars el el' : ExtraList .
-	var S : Script .
+	var n : Int .
 	vars P : Prog .
-	var mem mem' : Memory .
-	vars z v : Var .
+	vars M M' M'' M''' : Memory .
+	var v : NumVar .
+	vars z z' : Var .
+	var oi : ObjectId .
+	var o : Object .
+	var c : ClassName .
 	var f : FuncName .
-	var vl : VarList .
+	var i : Input .
+	var il : InputList .
+	var ar : Arg .
+	var arl arl' : ArgList .
 	var a : AritExp .
-	vars al al' : AritExpList .
+	vars fb fb' : FuncBlock .
+	var cl : ClassList .
+	var fl : FuncList .
 
-	*** Give a personalised stack to a function call.
-	crl [function-givestack] : < f ( al ), el function z = f ( vl ) { P }, mem > => mem'[z]  
-		if < P, el function z = f ( vl ) { P }, [main] giveStack [ vl al mem ] > => 
-		< skip, el function z = f ( vl ) { P }, mem' > .	
+	*** Semantics of the return operation (only present in functions).
+	crl [return] : < return a, fb, cl, M > => < skip, fb, cl, M[ 'return / n ] >
+		if < a, fb, cl, M > => n .
 
-	*** If one of the arguments passed to a function is an arithmetic expression, 
-	*** first evaluate it.
-	crl [function-arit] : < f (al, a, al'), el function z = f ( vl ) { P }, mem > => 
-		< f (al, N, al'), el function z = f ( vl ) { P }, mem > 
-		if < a, el function z = f ( vl ) { P }, mem > => N .
+	***(
+	*** When some arguments are passed to a function, first evaluate them in the previous stack.
+	crl [functions-evaluate-return] : < z = f ( arl, ar, arl' ), fb, cl, M > => < z = f ( arl, n, arl' ), fb, cl, M >
+		if < ar, fb, cl, M > => n .
+	crl [functions-evaluate-noreturn] : < f ( arl, ar, arl' ), fb, cl, M > => < f ( arl, n, arl' ), fb, cl, M >
+		if < ar, fb, cl, M > => n .
+	crl [functions-evaluate-run] : < run f ( arl, ar, arl' ), fb, cl, M > => < run f ( arl, n, arl' ), fb, cl, M >
+		if < ar, fb, cl, M > => n .
+	)
+
+	*** Now all arguments have been evaluated, they are numbers or objects, so pass the operators.
+	crl [functions-assign] : < z = f ( arl ), fb ( [main] ( fl function f (il) {P} ) ), cl, M > => 
+		< skip, fb ( [main] ( fl function f (il) {P} ) ), cl, M[ z / M''[ 'return ] ] > if 
+		giveMemory [ ( il ) ( arl ) None fb cl ; M / NoMemory ] => M' /\ 
+		giveFunctions [ il arl None cl M ; fb ( [main] ( fl function f (il) {P} ) ) / NoFuncBlock ] => fb' /\ 
+		< P, fb', cl, M' > => < skip, fb', cl, M'' > .
+	crl [functions-arithmetic] : < f ( arl ), fb ( [main] ( fl function f (il) {P} ) ), cl, M > => n if 
+		giveMemory [ ( il ) ( arl ) None fb cl ; M / NoMemory ] => M' /\ 
+		giveFunctions [ ( il ) ( arl ) None cl M ; ( fb ( [main] ( fl function f (il) {P} ) ) ) / NoFuncBlock ] => fb' /\ 
+		< P, fb', cl, M' > => < skip, fb', cl, M'' > /\ 
+		M''[ 'return ] => n .
+
+	*** Evaluate if the arguments passed are arithmetic expressions.
+	crl giveMemory [ ( v, il ) ( a, arl ) None fb cl ; M / M' ] => 
+		giveMemory [ ( v, il ) ( n, arl ) None fb cl ; M / M' ] if 
+		< a, fb, cl, M > => n .
+	*** Evaluate if the arguments passed are arithmetic expressions.
+	crl giveFunctions [ ( v, il ) ( ar, arl ) None cl M ; fb / fb' ] => 
+		giveFunctions [ ( v, il ) ( n, arl ) None cl M ; fb / fb' ] if 
+		< ar, fb, cl, M > => n .
+
+	***( 
+	*** Call the relevant operator during a main function call.
+	crl [mainfunction-operators] : < z = f (arl), fb ([main] ( fl function f (il) {P} ) ), cl, M > =>
+		< skip, fb ([main] ( fl function f (il) {P} ) ), cl, M[ z / M''['return] ] > if
+		giveFunctions [ il arl None ; fb ([main] ( fl function f (il) {P} ) ) / NoFuncBlock ] => fb' /\ 
+		giveMemory [ il arl None ; M / NoMemory ] => M' /\ 
+		< P, fb', cl, M' > => < skip, fb', cl, M'' > .
+	crl [mainfunction-operators] : < z = f (arl), fb ([main] ( fl function f (il) {P} ) ), cl, M > =>
+		< skip, fb ([main] ( fl function f (il) {P} ) ), cl, M[ z / M''['return] ] > if
+		giveFunctions [ il arl None ; fb ([main] ( fl function f (il) {P} ) ) / NoFuncBlock ] => fb' /\ 
+		giveMemory [ il arl None ; M / NoMemory ] => M' /\ 
+		< P, fb', cl, M' > => < skip, fb', cl, M'' > .
+	)
 
 endm
 
+
+***(
 mod IMP-OBJECTS-SEMANTICS is
 
 	*** This module specifies the semantics of objects.
 
 	protecting IMP-FUNCTIONS-SEMANTICS .
 
-	vars x v : Var .
-	var z : ClassVar .
+	vars z : Var .
+	var v : Numvar .
 	var c : ClassName .
-	vars al al' : AritExpList .
-	var a : AritExp .
-	var el : ExtraList .
-	vars mem mem' : Memory .
+	var il : InputList .
+	var arl : ArgList .
+	var f : FuncName .
+	var M : Memory .
+	
 	var N : Int .
 	var nl : NumberList .
 	var vl : VarList .
@@ -167,14 +269,37 @@ mod IMP-OBJECTS-SEMANTICS is
 	var cfl : ClassFuncList .
 	var S S' : Stack .
 
+	*** If an object is calling its own function.
+	rl < x = this . f (arl), fb, cl, M > => 
+		< P, giveFunctions [ il arl [ this ; c ] ; fb ( [ this ; c ] (fl function f (il) {P} ) ) / NoFuncBlock ], 
+		cl, giveMemory [ il arl [ this ; c ] ; M / EmptyMemory ] > .
+
+	*** If another object's function is called.
+	rl < x = o . f (arl), fb ( [ o ; c ] (fl function f (il) {P} ) ), cl, M > => 
+		< P, giveFunctions [ il arl [ o ; c ] ; fb ( [ this ; c ] fb ( [ o ; c ] (fl function f (il) {P} ) ) / NoFuncBlock ], 
+		cl, giveMemory [ il arl [ o ; c ] ; M / EmptyMemory ] > .
+
+	*** If an object is calling a function, give its variables.
+	rl [givemem-this] : giveMemory [ (void void [ o ; c ] ; (M [ o ; c ] S) / M' ] => 
+		giveMemory [ void void None ; (M [ o ; c ] S) / ( M' [ this ; c] S) ] .
+
+
+
+
+
+
+
+
+
+
 	*** How to run the declaration of a new instance of a class.
 	*** First transform an arithmetic expression that comes as arguments to the class initialization.
 	crl [class-firsttransform] : < x = new c (al, a, al'), el, mem > => 
 		< x = new c (al, N, al'), el, mem > if < a, el, mem > => N .
 	*** Once the arguments are transformed to numbers, running the constructor means creating a personalized stack.
 	crl [class-onlynumbers] : < x = new c (nl), el class c { constructor (vl) {P} cfl }, mem > =>
-		< skip, el class c { constructor (vl) {P} cfl }, mem [ x ] S' > if 
-		giveStack [ vl nl mem ] => S /\ < P, el, [main] S [this] EmptyStack > => < skip, el, mem' [this] S' > .
+		< skip, el class c { constructor (vl) {P} cfl }, mem [ x : c ] S' > if 
+		giveStack [ vl nl mem ] => S /\ < P, el, [main] S [ x : c ] EmptyStack > => < skip, el, mem' [ x : c ] S' > .
 
 	*** Assignment of a class variable.
 	crl [class-assign] : < z = a, el, mem > => < skip, el, mem [ z / N ] > if 
@@ -182,8 +307,18 @@ mod IMP-OBJECTS-SEMANTICS is
 
 	*** Evaluation of a class variable.
 	rl [class-eval] : < z, el, mem > => mem [ z ] .
+
+	*** Calling of an object's functions from outside.
+	crl [class-func] : < c . f ( al ), el class c (vl) { cfl v = function f ( vl ) {P} }, mem > => < skip, el, mem' > if
+		 < P, el class c (vl) { cfl v = function f ( vl ) {P} }, giveStack [ vl al mem ] > => 
+		< skip, el class c (vl) { cfl v = function f ( vl ) {P} }, mem' > .
+
+	*** Calling an object's function from the inside.
+	crl [class-func] : < c . f ( al ), el class c (vl) { cfl v = function f ( vl ) {P} }, mem > => < skip, el, mem' > if
+		 < P, el class c (vl) { cfl v = function f ( vl ) {P} }, giveStack [ vl al mem ] > => 
+		< skip, el class c (vl) { cfl v = function f ( vl ) {P} }, mem' > .
 	
 endm
 
-
+)
 

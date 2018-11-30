@@ -1,37 +1,23 @@
-load imp_utils.maude .
+load imp_defs.maude .
 
 fmod IMP-BASIC-SYNTAX is
 
 	*** This module specifies the basic syntax.
 
-	protecting IMP-STACK .
+	protecting IMP-MEMORY .
 
 	*** Syntax of arithmetic expressions.
 	sort AritExp .
 	subsort Var < AritExp .
 	subsort Int < AritExp .
-	op _+_ : AritExp AritExp -> AritExp [ditto] .
-	op _-_ : AritExp AritExp -> AritExp [ditto] .
-	op _*_ : AritExp AritExp -> AritExp [ditto] .
+	
 
 	*** Syntax of boolean expresions.
 	sort BoolExp .
-	ops true false : -> BoolExp [ctor] .
-	op _==_ : AritExp AritExp -> BoolExp [comm prec 26] .
-	op _!=_ : AritExp AritExp -> BoolExp [comm prec 26] .
-	op _leq_ : AritExp AritExp -> BoolExp .
-	op _geq_ : AritExp AritExp -> BoolExp .
-	op not_ : BoolExp -> BoolExp .
-	op _and_ : BoolExp BoolExp -> BoolExp [assoc comm] .
-	op _or_ : BoolExp BoolExp -> BoolExp [assoc comm] .
+	
 
 	*** Syntax of statements.
-	sort Prog .
-	op skip : -> Prog [ctor] .
-	op _=_ : Var AritExp -> Prog [ctor prec 30] .
-	op _;_ : Prog Prog -> Prog [ctor assoc] .
-	op if_then_else_ : BoolExp Prog Prog -> Prog [ctor] .
-	op while_do_ : BoolExp Prog -> Prog [ctor] .
+	
 
 endfm
 
@@ -41,7 +27,7 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	
 	protecting IMP-BASIC-SYNTAX .
 
-	*** Define lists of variables for the definition of a function.
+	*** Define lists of variables for the declaration of a function.
 	sort VarList .
 	subsort Var < VarList .
 	op void : -> VarList [ctor] .
@@ -57,11 +43,7 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	sorts FuncName Func .
 	subsort Qid < FuncName .
 
-	*** Specify how to declare a function.
-	op function _ = _ (_) {_} : Var FuncName VarList Prog -> Func [ctor] .
 	
-	*** Specify how to call a function.
-	op _(_) : FuncName AritExpList -> AritExp [ctor] . 
 
 endfm
 
@@ -71,15 +53,17 @@ fmod IMP-OBJECTS-SYNTAX is
 
 	protecting IMP-FUNCTIONS-SYNTAX .
 	
-	sort Class ClassName ClassVar ClassFunc .
+	sort Class ClassName ObjectVar ClassVar ClassFunc .
+	subsort Qid < ObjectVar .
 	subsort Qid < ClassName .
 	subsort ClassVar < AritExp .
+	subsort ClassVar < VarList .
 	***subsort Func < ClassFunc .
 
 	op _=_ : ClassVar AritExp -> Prog [ditto] .
 
 	*** Define the object's variables.
-	op _._ : ClassName Var -> ClassVar [ctor] .
+	op _._ : ObjectVar Var -> ClassVar [ctor] .
 	op this ._ : Var -> ClassVar [ctor] .
 
 	*** Define the object's functions.
@@ -87,12 +71,14 @@ fmod IMP-OBJECTS-SYNTAX is
 	subsort ClassFunc < ClassFuncList .
 	op EmptyClassFuncList : -> ClassFuncList [ctor] .
 	op __ : ClassFuncList ClassFuncList -> ClassFuncList [ctor assoc id: EmptyClassFuncList] .
+	op _(_) {_} : FuncName VarList Prog -> CLassFunc [ctor] .
+	op _._(_) : ObjectVar FuncName AritExpList -> AritExp .
 
 	*** Define thes syntax to write a class.
 	op class _ {_} : ClassName ClassFuncList -> Class [ctor] .
 
 	*** Define the syntax to create a new instance of an object.
-	op _ = new _(_) : Var ClassName AritExpList -> Prog [ctor] .
+	op _ = new _(_) : ObjectVar ClassName AritExpList -> Prog [ctor] .
 
 	*** A special function in a class is its constructor function.
 	op constructor(_) {_} : VarList Prog -> ClassFunc [ctor] .
@@ -109,16 +95,18 @@ endfm
 fmod IMP-MEMORY is
 
 	*** This module specifies the memory, which will consist of a stack for the global
-	*** variables, and then a reserved stack for each object declared.
+	*** variables, and then a reserved stack for each object.
 
 	protecting IMP-OBJECTS-SYNTAX .
 
 	var c : ClassName .
+	var o : ObjectVar .
 	var v : Var .
 	var M : Memory .
 	***var z : ClassVar .
 	var S : Stack .
 	vars N N' : Int .
+	var x : ObjectVar .
 
 	sorts Memory MainMemory ClassMemory ThisMemory .
 	subsort MainMemory < Memory .
@@ -126,8 +114,8 @@ fmod IMP-MEMORY is
 	subsort ThisMemory < Memory .
 	op EmptyMemory : -> Memory [ctor] .
 	op [main] _ : Stack -> MainMemory [ctor] .
-	op [this] _ : Stack -> ThisMemory [ctor] .
-	op [_] _ : ClassName Stack -> ClassMemory [ctor] .
+	op [ this ; _] _ : ClassName Stack -> ThisMemory [ctor] .
+	op [_;_] _ : ObjectVar ClassName Stack -> ClassMemory [ctor] .
 	op __ : Memory Memory -> Memory [ctor assoc comm id: EmptyMemory] .
 
 
@@ -137,7 +125,7 @@ fmod IMP-MEMORY is
 	eq M [ v ] = main M [ v ] .
 	*** Object variables
 	op _[_] : Memory ClassVar ~> Int [ctor] .
-	eq M [ c . v ] = object M [ c . v ] .
+	eq M [ o . v ] = object M [ o . v ] .
 	eq M [ this . v ] = this M [ this . v ] .
 
 	*** Change or add elements to memory.
@@ -146,33 +134,33 @@ fmod IMP-MEMORY is
 	eq M [ v / N ] = main M [ v / N ] .
 	*** Object variables.
 	op _[_/_] : Memory ClassVar Int -> Memory [ctor] .
-	eq M [ ( c . v ) / N ] = object M [ ( c . v ) / N ] .
+	eq M [ ( o . v ) / N ] = object M [ ( o . v ) / N ] .
 	eq M [ ( this . v ) / N ] = this M [ ( this . v ) / N ] .
 
 	*** Access elements in memory, specific definitions.
 	*** Case of global variables.
 	op main _[_] : Memory Var ~> Int [ctor] .
 	eq main (M [main] ( S < v, N > ) ) [v] = N .
-	*** Case of class variables from the outside.
+	*** Case of other objects's variables.
 	op object _[_] : Memory ClassVar ~> Int [ctor] .
-	eq object (M [c] ( S < v, N > ) ) [ ( c . v ) ] = N .
-	*** Case of class variables from the inside.
+	eq object (M [ o ; c ] ( S < v, N > ) ) [ ( o . v ) ] = N .
+	*** Case of object's own variables.
 	op this _[_] : Memory ClassVar ~> Int [ctor] .
-	eq this (M [this] ( S < v, N > ) ) [ this . v ] = N .
+	eq this (M [ this ; c ] ( S < v, N > ) ) [ ( this . v ) ] = N .
 
 	*** Change values or add elements to memory, specific definitions.
 	*** Case of global variables.
 	op main _[_/_] : Memory Var Int -> Memory .
-	eq main (M [main] ( S < v, N >) ) [v / N'] = M [main] ( S < v, N' > ) .
-	eq main (M [main] S) [v / N] = M [main] ( S < v, N > ) [owise] .
-	*** Case of class variables from the outside.
+	eq main (M [main] (S < v, N >) ) [v / N'] = M ( [main] (S < v, N' > ) ) .
+	eq main (M [main] S) [v / N] = M ( [main] ( S < v, N > ) ) [owise] .
+	*** Case of other objects' variables.
 	op object _[_/_] : Memory ClassVar Int -> Memory .
-	eq object (M [c] ( S < v, N > ) ) [ ( c . v )  / N'] = M [c] ( S < v, N' > ) .
-	eq object (M [c] S) [ c . v / N] = M [c] ( S < v, N > ) [owise] .
-	*** Case of class variables from the inside.
+	eq object (M [o ; c] ( S < v, N > ) ) [ ( o . v )  / N'] = M [o ; c] (S < v, N' >) .
+	eq object (M [o ; c] S) [ o . v / N] = M [o ; c] ( S < v, N > ) [owise] .
+	*** Case of object's own variables.
 	op this _[_/_] : Memory ClassVar Int -> Memory .
-	eq this (M [this] ( S < v, N > ) ) [ ( this . v )  / N'] = M [this] ( S < v, N' > ) .
-	eq this (M [this] S) [ ( this . v ) / N] = M [this] ( S < v, N > ) [owise] .
+	eq this (M [this ; c] ( S < v, N > ) ) [ ( this . v )  / N'] = M [this ; c] ( S < v, N' > ) .
+	eq this (M [this ; c] S) [ ( this . v ) / N] = M [this ; c] ( S < v, N > ) [owise] .
 
 endfm
 
@@ -183,10 +171,16 @@ fmod IMP-EXTRAS-SYNTAX is
 	protecting IMP-MEMORY .
 
 	vars v b : Var .
+	var a : Var .
 	var vl : VarList .
 	var al : AritExpList .
 	var N : Int .
 	var mem : Memory .
+	vars M M' : Memory .
+	vars o o' : ObjectVar .
+	var c : ClassName .
+	var S : Stack .
+	var z : ClassVar .
 
 	sorts Extra ExtraList .
 	subsort Extra < ExtraList .
@@ -207,6 +201,23 @@ fmod IMP-EXTRAS-SYNTAX is
 	eq giveStack [ ( v, vl ) ( b, al ) mem ] = < v, mem [ b ] > giveStack [ vl al mem ] .
 	eq giveStack [ ( v, vl ) ( N, al ) mem ] = < v, N > giveStack [ vl al mem ] .
 	eq giveStack [ ( void ) ( void ) mem ] = EmptyStack .
+
+	*** Give a Memory block for a function execution.
+	*** This giveMemory function's last argument is an identifier if the function requesting
+	*** memory belings to an object or not.
+	op giveMemory [___[_;_]] (_) : VarList AritExpList Memory ObjectVar ClassName Memory -> Memory [ctor] .
+	op None : -> ObjectVar [ctor] .
+	eq giveMemory [ vl al M [o ; c] ] (EmptyMemory) = giveMemory [ vl al M o ] ([main] EmptyStack [this ; c] EmptyStack) .
+	eq giveMemory [ (v, vl) (a, al) M ( [o ; c] ) ] (M') = 
+		giveMemory [ vl al M [o ; c] ] (M' [ v / M [a] ]) .
+	eq giveMemory [ (v, vl) (o, al) ( M [ o ; c ] S ) ( [o' ; c'] ) ] (M') = 
+		giveMemory [ vl al ( M [ o ; c ] S ) ( [o' ; c'] ) ] (M' [ o ; c ] S) .
+	eq giveMemory [ (v, vl) (o . v, al) ( M [ o ; c ] S < v, N > ) ( [o' ; c'] ) ] (M') = 
+		giveMemory [ vl al ( M [ o ; c ] S < v, N > ) ( [o' ; c'] ) ] (M' [ v / N ]) .
+	eq giveMemory [ (v, vl) (this . v, al) ( M [ this ; c ] S < v, N > ) ( [o' ; c'] ) ] (M') = 
+		giveMemory [ vl al ( M [ this ; c ] S < v, N > ) ( [o' ; c'] ) ] (M' [ v / N ]) .
+	eq giveMemory [ void void M None ] (M') = M' .
+	eq giveMemory [ void void (M [o ; c] S) ( [o' ; c'] ) ] (M') = M' [this ; c] S . 
 
 endfm
 
