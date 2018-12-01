@@ -6,11 +6,7 @@ fmod IMP-BASIC-SYNTAX is
 
 	protecting IMP-STACK .
 
-	sorts AritExp BoolExp Prog .
-
 	*** Syntax of arithmetic expressions.
-	subsort Var < AritExp .
-	subsort Int < AritExp .
 	op _+_ : AritExp AritExp -> AritExp [ditto] .
 	op _-_ : AritExp AritExp -> AritExp [ditto] .
 	op _*_ : AritExp AritExp -> AritExp [ditto] .
@@ -27,10 +23,13 @@ fmod IMP-BASIC-SYNTAX is
 
 	*** Syntax of statements.
 	op skip : -> Prog [ctor] .
-	op _=_ : Var AritExp -> Prog [ctor prec 30] .
+	op _=_ : NumVar AritExp -> Prog [ctor prec 30] .
+	op _=_ : ArrayVar Array -> Prog [ctor] .
 	op _;_ : Prog Prog -> Prog [ctor assoc] .
-	op if_then_else_ : BoolExp Prog Prog -> Prog [ctor] .
-	op while_do_ : BoolExp Prog -> Prog [ctor] .
+	op if (_) {_} else {_} : BoolExp Prog Prog -> Prog [ctor] .
+	op while (_) {_} : BoolExp Prog -> Prog [ctor] .
+	op return _ : AritExp -> Prog [ctor] .
+	op return _ : Array -> Prog [ctor] .
 
 endfm
 
@@ -41,49 +40,70 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	protecting IMP-BASIC-SYNTAX .
 
 	*** Define lists of variables for the definition of a function.
+	*** Only variables and arrays.
 	sort VarList .
-	subsort Var < VarList .
+	subsort NumVar < VarList .
+	subsort ArrayVar < VarList .
 	op void : -> VarList [ctor] .
 	op _,_ : VarList VarList -> VarList [ctor assoc id: void] .
 
-	*** Define lists of arithmetic expressions for the function calls from scripts.
-	sort AritExpList .
-	subsort AritExp < AritExpList .
-	subsort VarList < AritExpList .
-	op _,_ : AritExpList AritExpList -> AritExpList [ctor assoc id: void] .	
+	*** Define lists of what can be passed to the function on a function call.
+	sorts Arg ArgList .
+	subsort Arg < ArgList .
+	subsort AritExp < Arg .
+	subsort ArrayVar < Arg .
+	subsort VarList < ArgList .
+	op _,_ : ArgList ArgList -> ArgList [ctor assoc id: void] .
 	
 	*** Define the Func type.
-	sorts FuncName Func FuncList .
+	sorts FuncName Func .
 	subsort Qid < FuncName .
-	subsort Func < FuncList .
-	op EmptyFuncList : -> FuncList [ctor] .
-	op __ : FuncList FuncList -> FuncList [ctor assoc comm id: EmptyFuncList] .
 
-	*** Define the type Script, a Prog type followed by, possibly, a list of functions.
+	*** How to write a function.
+	op function _ (_) {_} : FuncName VarList Prog -> Func [ctor] .
+
+	*** Syntax of a function call.
+	op _(_) : FuncName AritExp -> AritExp [ctor] .  
+
+endfm
+
+fmod IMP-SCRIPT is
+	
+	*** Define the sort Script.
+
+	protecting IMP-FUNCTIONS-SYNTAX .
+
+	*** Define a list of functions to specify in the script.
+	sort FuncList .
+	subsort Func < FuncList .
+	op NoFunc : -> FuncList [ctor] .
+	op __ : FuncList FuncList -> FuncList [ctor assoc comm id: NoFunc] .
+
 	sort Script .
 	op main{_} : Prog -> Script [ctor] .
 	op main{_}_ : Prog FuncList -> Script [ctor] .
 
-	*** Specify how to write a single function.
-	op function _ = _ (_) {_} : Var FuncName VarList Prog -> Func [ctor] .
+endfm
 
+fmod IMP-GIVESTACK is
 	
-	*** Define the function call: the name of the function followed by a list 
-	*** of arithmetic expressions.
-	op _(_) : FuncName AritExpList -> AritExp [ctor] .
+	*** This module specifies the operator to give each function its own
+	*** Stack for execution.
 
+	protecting IMP-SCRIPT .
 
-	*** Define the syntax to give each function its own Stack.
 	vars v b : Var .
 	var vl : VarList .
-	var al : AritExpList .
-	var N : Int .
-	var sigma : Stack .
+	var arl : ArgList .
+	var n : Int .
+	var S : Stack .
 
-	op giveStack [___] : VarList AritExpList Stack -> Stack [ctor] .
-	eq giveStack [ ( v, vl ) ( b, al ) sigma ] = < v, sigma [ b ] > giveStack [ vl al sigma ] .
-	eq giveStack [ ( v, vl ) ( N, al ) sigma ] = < v, N > giveStack [ vl al sigma ] .
-	eq giveStack [ ( void ) ( void ) sigma ] = EmptyStack . 
+	op giveStack [___] : VarList ArgList Stack -> Stack [ctor] .
+
+	*** The semantics will specify how this operator works.
+	***eq giveStack [ ( v, vl ) ( b, al ) S ] = < v, S [ b ] > giveStack [ vl al S ] .
+	***eq giveStack [ ( v, vl ) ( n, al ) S ] = < v, n > giveStack [ vl al S ] .
+	eq giveStack [ ( void ) ( void ) S ] = NoStack . 
 
 endfm
 
