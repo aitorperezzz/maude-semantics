@@ -18,15 +18,16 @@ rew exec ( main
 	{
 		'a = 10 ; 
 		'b = 5 ;
-		'c = 'sum ( 'a, 'b )  
+		'c = ( 'sum ( 'a, 'b ) )   
 	}
 	function 'sum ( 'x, 'y ) {
 			return ( 'x + 'y ) 
 	} ) .
 
+
 rew exec ( main { 
 		'n = 3 ; 
-		( 'f = 'factorial ('n) ) 
+		'f = ( 'factorial ('n) ) 
 	} 
 	function 'factorial ('integer) { 
 		if ('integer geq 2) { 
@@ -37,12 +38,10 @@ rew exec ( main {
 		} 
 	} ) .
 
-***(
-
 rew exec ( main { 
 		'a = 5 ; 
-		( 'b = 'sum('a, 1) ) ; 
-		( 'c = 'product ( 'b, ('sum('a, 2) ) ) )   
+		'b = ( 'sum ('a, 1) ) ; 
+		'c = ( 'product ( 'b, ( 'sum('a, 2) ) ) )    
 	}
 	function 'sum ('x, 'y) { 
 		return ('x + 'y ) 
@@ -51,12 +50,12 @@ rew exec ( main {
 		return ( 'x * 'y ) 
 	} ) .
 
-
+***(
 *** Tests for classes
 rew exec ( main 
 	{ 
 		'a = 5 ; 
-		( 'z = new 'Ball ('a) ) ;
+		'z = new 'Ball ('a) ;
 		'u = ( ( 'z . 'w ) + 1 )   
 	} 
 	class 'Ball { 
@@ -66,7 +65,6 @@ rew exec ( main
 	} ) .
 
 )
-
 
 
 

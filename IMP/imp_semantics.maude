@@ -4,9 +4,9 @@ mod IMP-INITIALPARSE is
 	
 	*** Define the initial parsing rules.
 
-	protecting IMP-AFTEREXECUTION .
+	protecting PRE-EXECUTION .
 
-	var t : Script .
+	***var t : Script .
 	vars P P' : Prog .
 	var f : FuncName .
 	var il : InputList .
@@ -16,7 +16,7 @@ mod IMP-INITIALPARSE is
 	var fb : FuncBlock .
 	var c : ClassName .
 
-	op parse [_,_,_] : FuncList ClassList Execution -> Execution [ctor] .
+	op parse [_,_,_] : FuncList ClassList Exec -> Exec [ctor] .
 
 	*** Complete the execution statement in case the user has not given all information.
 	rl [exec-nofunc] : exec ( main {P} ( cl ) ) => exec ( main {P} NoFunc cl ) .
@@ -178,7 +178,7 @@ mod IMP-FUNCTIONS-SEMANTICS is
 	protecting IMP-BASIC-SEMANTICS .
 
 	var n : Int .
-	vars P : Prog .
+	vars P P' : Prog .
 	vars M M' M'' M''' : Memory .
 	var v : NumVar .
 	vars z z' : Var .
@@ -189,26 +189,28 @@ mod IMP-FUNCTIONS-SEMANTICS is
 	var i : Input .
 	var il : InputList .
 	var ar : Arg .
-	var arl arl' : ArgList .
+	vars arl arl' : ArgList .
 	var a : AritExp .
 	vars fb fb' : FuncBlock .
-	var cl : ClassList .
+	vars cl cl' : ClassList .
 	var fl : FuncList .
 
 	*** Semantics of the return operation (only present in functions).
 	crl [return] : < return a, fb, cl, M > => < skip, fb, cl, M[ 'return / n ] >
 		if < a, fb, cl, M > => n .
 
-	***(
-	*** When some arguments are passed to a function, first evaluate them in the previous stack.
-	crl [functions-evaluate-return] : < z = f ( arl, ar, arl' ), fb, cl, M > => < z = f ( arl, n, arl' ), fb, cl, M >
+	*** Rewrite a function call to a personalize operation, and pass the main functions on the fly.
+	crl < f (arl), fb ([main] (fl function f (il) {P})), cl, M > => M'[ 'return ] if 
+		personalize [ il ; arl ; None ; fb ([main] (fl function f (il) {P})), cl, M ; < P, ([main] (fl function f (il) {P})), NoClass, NoMemory > ] => 
+		< skip, fb', cl', M' > . 
+		
+	*** Evaluate the arguments inside the personalize operator.
+	crl personalize [ (v, il) ; (ar, arl) ; oi ; fb, cl, M ; < P', fb', cl', M' > ] => 
+		personalize [ (v, il) ; (n, arl) ; oi ; fb, cl, M ; < P', fb', cl', M' > ] 
 		if < ar, fb, cl, M > => n .
-	crl [functions-evaluate-noreturn] : < f ( arl, ar, arl' ), fb, cl, M > => < f ( arl, n, arl' ), fb, cl, M >
-		if < ar, fb, cl, M > => n .
-	crl [functions-evaluate-run] : < run f ( arl, ar, arl' ), fb, cl, M > => < run f ( arl, n, arl' ), fb, cl, M >
-		if < ar, fb, cl, M > => n .
-	)
 
+	
+	***(
 	*** Now all arguments have been evaluated, they are numbers or objects, so pass the operators.
 	crl [functions-assign] : < z = f ( arl ), fb ( [main] ( fl function f (il) {P} ) ), cl, M > => 
 		< skip, fb ( [main] ( fl function f (il) {P} ) ), cl, M[ z / M''[ 'return ] ] > if 
@@ -220,6 +222,7 @@ mod IMP-FUNCTIONS-SEMANTICS is
 		giveFunctions [ ( il ) ( arl ) None cl M ; ( fb ( [main] ( fl function f (il) {P} ) ) ) / NoFuncBlock ] => fb' /\ 
 		< P, fb', cl, M' > => < skip, fb', cl, M'' > /\ 
 		M''[ 'return ] => n .
+	
 
 	*** Evaluate if the arguments passed are arithmetic expressions.
 	crl giveMemory [ ( v, il ) ( a, arl ) None fb cl ; M / M' ] => 
@@ -229,8 +232,9 @@ mod IMP-FUNCTIONS-SEMANTICS is
 	crl giveFunctions [ ( v, il ) ( ar, arl ) None cl M ; fb / fb' ] => 
 		giveFunctions [ ( v, il ) ( n, arl ) None cl M ; fb / fb' ] if 
 		< ar, fb, cl, M > => n .
+	
 
-	***( 
+	 
 	*** Call the relevant operator during a main function call.
 	crl [mainfunction-operators] : < z = f (arl), fb ([main] ( fl function f (il) {P} ) ), cl, M > =>
 		< skip, fb ([main] ( fl function f (il) {P} ) ), cl, M[ z / M''['return] ] > if
@@ -246,28 +250,47 @@ mod IMP-FUNCTIONS-SEMANTICS is
 
 endm
 
-
 ***(
+
 mod IMP-OBJECTS-SEMANTICS is
 
 	*** This module specifies the semantics of objects.
 
 	protecting IMP-FUNCTIONS-SEMANTICS .
 
-	vars z : Var .
+	var n : Int .
 	var v : Numvar .
+	var o : Object .
 	var c : ClassName .
 	var il : InputList .
 	var arl : ArgList .
 	var f : FuncName .
 	var M : Memory .
-	
-	var N : Int .
-	var nl : NumberList .
-	var vl : VarList .
 	var P : Prog .
-	var cfl : ClassFuncList .
 	var S S' : Stack .
+	vars fb fb' : FuncBlock .
+	vars cl cl' : ClassList .
+
+	*** Declare a new object.
+	crl < o = new c (arl), fb, cl class c { constructor(il) {P} fl}, M > => 
+		< skip, fb ([ o ; c] fl), cl class c { constructor(il) {P} fl}, M (M' [ this - o ]) > if 
+		personalize [ il ; arl ; None ; fb, cl class c { constructor(il) {P} }, M ; < P, NoFuncBlock, NoClass, NoMemory > ] =>
+		< skip, fb', cl', M' > .
+
+	*** Access an object's variable.
+	***rl < ( o . v ), fb, cl, M > => M [ o . v ] .
+
+	*** Rewrite a function call to a personalize operation, pass the main functions on the fly.
+	crl < ( o . f ) (arl), fb ([main] fl) ([ o ; c ] (fl' function f(il){P} )), cl, M > => 
+		M'[ 'return ] if 
+		personalize [ il arl [ o ; c ] ; fb ([main] fl) ([ o ; c ] (fl' function f(il){P} )), cl, M ; 
+			< P, fb ([main] fl) ([ this ; c ] (fl' function f(il){P}) , NoClass, NoMemory > ]  => 
+		< skip, fb', cl', M' > .
+
+
+	
+endm
+
 
 	*** If an object is calling its own function.
 	rl < x = this . f (arl), fb, cl, M > => 
@@ -276,20 +299,12 @@ mod IMP-OBJECTS-SEMANTICS is
 
 	*** If another object's function is called.
 	rl < x = o . f (arl), fb ( [ o ; c ] (fl function f (il) {P} ) ), cl, M > => 
-		< P, giveFunctions [ il arl [ o ; c ] ; fb ( [ this ; c ] fb ( [ o ; c ] (fl function f (il) {P} ) ) / NoFuncBlock ], 
+		< P, giveFunctions [ il arl [ o ; c ] ; fb  [ this ; c ] fb ( [ o ; c ] (fl function f (il) {P} ) ) / NoFuncBlock ], 
 		cl, giveMemory [ il arl [ o ; c ] ; M / EmptyMemory ] > .
 
 	*** If an object is calling a function, give its variables.
-	rl [givemem-this] : giveMemory [ (void void [ o ; c ] ; (M [ o ; c ] S) / M' ] => 
+	rl [givemem-this] : giveMemory [ void void [ o ; c ] ; (M [ o ; c ] S) / M' ] => 
 		giveMemory [ void void None ; (M [ o ; c ] S) / ( M' [ this ; c] S) ] .
-
-
-
-
-
-
-
-
 
 
 	*** How to run the declaration of a new instance of a class.
@@ -317,8 +332,6 @@ mod IMP-OBJECTS-SEMANTICS is
 	crl [class-func] : < c . f ( al ), el class c (vl) { cfl v = function f ( vl ) {P} }, mem > => < skip, el, mem' > if
 		 < P, el class c (vl) { cfl v = function f ( vl ) {P} }, giveStack [ vl al mem ] > => 
 		< skip, el class c (vl) { cfl v = function f ( vl ) {P} }, mem' > .
-	
-endm
+	)
 
-)
 

@@ -16,7 +16,6 @@ fmod IMP-BASICS is
 	sort AritExp .
 	subsort Int < AritExp .
 	subsort Var < AritExp .
-	***subsort ObjectVar < AritExp .
 	op _+_ : AritExp AritExp -> AritExp [ditto] .
 	op _-_ : AritExp AritExp -> AritExp [ditto] .
 	op _*_ : AritExp AritExp -> AritExp [ditto] .
@@ -54,7 +53,7 @@ fmod IMP-FUNCTIONS-DEF is
 	subsort Input < InputList .
 	subsort Object < Input .
 	subsort NumVar < Input .
-	op void : -> InputList [ctor] .
+	op void : -> Object [ctor] .
 	op _,_ : InputList InputList -> InputList [ctor assoc id: void] .
 
 	*** Define a list of what can be passed to a function: an arithmetic expression 
@@ -73,8 +72,7 @@ fmod IMP-FUNCTIONS-DEF is
 	*** Specify how to declare a function.
 	op function _ (_) {_} : FuncName InputList Prog -> Func [ctor] .
 	
-	*** There are three ways to call a function.
-	op _=_(_) : Var FuncName ArgList -> Prog [ctor] .
+	*** There are two ways to call a function: with a return value or without it.
 	op _(_) : FuncName ArgList -> AritExp [ctor] .
 	op run _(_) : FuncName ArgList -> Prog [ctor] .
 
@@ -95,15 +93,11 @@ fmod IMP-OBJECTS-DEF is
 	sorts Class ClassName .
 	subsort Qid < ClassName .
 
-	*** Define the list of functions that defines a class.
-	***sort ClassFuncList .
-	***subsort ClassFunc < ClassFuncList .
-	op constructor(_) {_} : ArgList Prog -> Func [ctor] .
-	***op EmptyClassFuncList : -> ClassFunc [ctor] .
-	***op __ : ClassFuncList ClassFuncList -> ClassFuncList [ctor assoc comm id: EmptyClassFuncList] .
-
-	*** Declare a class
+	*** Declare a class.
 	op class _ {_} : ClassName FuncList -> Class [ctor] .
+
+	*** A special function in a class is the constructor function.
+	op constructor(_) {_} : InputList Prog -> Func [ctor] .
 
 	*** A list of class definitions at the end of a Script.
 	sort ClassList .
@@ -114,24 +108,18 @@ fmod IMP-OBJECTS-DEF is
 	*** Create an object with a defined class.
 	op _ = new _ (_) : Object ClassName ArgList -> Prog [ctor] .
 
-	*** How to call object variables.
+	*** Define the object variables.
 	op this : -> Object [ctor] .
-	***op this . _ : NumVar -> ObjectVar [ctor] .
-	op _ . _ : Object NumVar -> ObjectVar [ctor] .
+	op _._ : Object NumVar -> ObjectVar [ctor] .
 
-	*** How to call object functions.
-	op _ = this . _ (_) : Var FuncName ArgList -> Prog [ctor] . 
-	op _ = _ . _ (_) : Var Object FuncName ArgList -> Prog [ctor] .
-	op this . _ (_) : FuncName ArgList -> Prog [ctor] . 
-	op _ . _ (_) : Object FuncName ArgList -> Prog [ctor] .
-
-	*** A class function can be called as is, or asking for a returning value.
-	***op _ : ClassFuncCall -> Prog .
-	***op _=_ : Var ClassFuncCall -> Prog .
+	*** Define the object functions (called methods), which also can be called in 
+	*** two different ways.
+	op (_._)(_) : Object FuncName ArgList -> AritExp [ctor] .
+	op run (_._)(_) : Object FuncName ArgList -> Prog [ctor] .
 
 	*** Define an object identifier.
 	sort ObjectId .
-	op [_;_] : Object NumVar -> ObjectId [ctor] .
+	op [_;_] : Object ClassName -> ObjectId [ctor] .
 	op None : -> ObjectId [ctor] .
 
 endfm
@@ -144,24 +132,24 @@ fmod IMP-STACK is
 	protecting IMP-OBJECTS-DEF .
 
 	var S : Stack .
-	vars v v' : Var .
+	vars v v' : NumVar .
 	vars N N' : Int .
 
 	sorts StackCell Stack .
 	subsort StackCell < Stack .
 
-	op <_,_> : Var Int -> StackCell [ctor] .
+	op <_,_> : NumVar Int -> StackCell [ctor] .
 
 	op EmptyStack : -> Stack [ctor] .
 	op __ : Stack Stack -> Stack [ctor comm assoc id: EmptyStack] .
 
 	*** Change values or add elements to the stack.
-	op _[_/_] : Stack Var Int -> Stack .
+	op _[_/_] : Stack NumVar Int -> Stack .
 	eq (S < v, N >) [v / N'] = S < v, N' > .
 	eq S [v / N] = S < v, N > [owise] .
 
 	*** Access the value of a variable in the stack, if it is there.
-	op _[_] : Stack Var ~> Int .
+	op _[_] : Stack NumVar ~> Int .
 	eq (S < v, N >) [v] = N .
 
 endfm
@@ -173,43 +161,44 @@ fmod IMP-MEMORY is
 
 	protecting IMP-STACK .
 
+	vars n n' : Int .
 	var c : ClassName .
-	var o : Object .
-	var z : ObjectVar .
+	vars o o' : Object .
 	var v : NumVar .
 	var M : Memory .
 	var S : Stack .
-	vars N N' : Int .
 
-	sorts Memory MainMemory ClassMemory .
-	subsort MainMemory < Memory .
-	subsort ClassMemory < Memory .
+	sorts Memory .
+	***subsort MainMemory < Memory .
+	***subsort ClassMemory < Memory .
 	***subsort ThisMemory < Memory .
 	op NoMemory : -> Memory [ctor] .
-	op [main] _ : Stack -> MainMemory [ctor] .
+	op [main] _ : Stack -> Memory [ctor] .
 	***op [ this ; _] _ : ClassName Stack -> ThisMemory [ctor] .
-	op __ : ObjectId Stack -> ClassMemory [ctor] .
+	op __ : ObjectId Stack -> Memory [ctor] .
 	op __ : Memory Memory -> Memory [ctor assoc comm id: NoMemory] .
 	eq NoMemory = ( [main] EmptyStack ) .
 
 	*** Access elements in memory.
 	*** Global variables.
 	op _[_] : Memory NumVar ~> Int [ctor] .
-	eq M [ v ] = main M [ v ] .
-	*** Object variables
+	eq (M [main] ( S < v, n > ) ) [v] = n .
+	*** Object variables.
 	op _[_] : Memory ObjectVar ~> Int [ctor] .
-	eq M [ o . v ] = object M [ o . v ] .
-	***eq M [ this . v ] = this M [ this . v ] .
+	eq (M [ o ; c ] ( S < v, n > ) ) [ ( o . v ) ] = n .
 
 	*** Change or add elements to memory.
 	*** Global variables.
 	op _[_/_] : Memory NumVar Int -> Memory [ctor] .
-	eq M [ v / N ] = main M [ v / N ] .
+	eq (M ([main] (S < v, n >) ) ) [v / n'] = M ([main] (S < v, n' >) ) .
+	eq (M ([main] S) ) [v / n] = M ([main] (S < v, n >) ) [owise] .
 	*** Object variables.
 	op _[_/_] : Memory ObjectVar Int -> Memory [ctor] .
-	eq M [ ( o . v ) / N ] = object M [ ( o . v ) / N ] .
-	***eq M [ ( this . v ) / N ] = this M [ ( this . v ) / N ] .
+	eq (M [o ; c] ( S < v, n > ) ) [ ( o . v )  / n'] = M [o ; c] (S < v, n' >) .
+	eq (M [o ; c] S) [ o . v / n] = M [o ; c] ( S < v, n > ) [owise] .
+	***eq M [ ( this . v ) / n ] = this M [ ( this . v ) / n ] .
 
+	***(
 	*** Access elements in memory, specific definitions.
 	*** Case of global variables.
 	op main _[_] : Memory NumVar ~> Int [ctor] .
@@ -234,6 +223,12 @@ fmod IMP-MEMORY is
 	***op this _[_/_] : Memory ObjectVar Int -> Memory .
 	***eq this (M [this ; c] ( S < v, N > ) ) [ ( this . v )  / N'] = M [this ; c] ( S < v, N' > ) .
 	***eq this (M [this ; c] S) [ ( this . v ) / N] = M [this ; c] ( S < v, N > ) [owise] .
+	)
+
+	*** Pass a memory block for certain object, and change the name if necessary.
+	op _[_-_] : Memory Object Object -> Memory [ctor] .
+	eq (M ([ o ; c ] S) ) [ o - o' ] = [ o' ; c ] S .
+	eq M [ o - o' ] = NoMemory [owise] .
 
 endfm
 
@@ -245,7 +240,7 @@ fmod IMP-FUNCBLOCKS is
 	protecting IMP-MEMORY .
 
 	var fb : FuncBlock .
-	vars v v' o o' : Qid .
+	vars o o' : Qid .
 	var c : ClassName .
 	var fl : FuncList .
 
@@ -255,20 +250,20 @@ fmod IMP-FUNCBLOCKS is
 	op NoFuncBlock : -> FuncBlock [ctor] .
 	op __ : FuncBlock FuncBlock -> FuncBlock [ctor assoc comm id: NoFuncBlock] .
 
-	*** Access a certain function block belonging to some variable.
-	op _[_;_] : FuncBlock Qid Qid -> FuncBlock [ctor] .
-	eq (fb [ o ; c ] fl) [ o ; o' ] = [ o' ; c ] fl .
-	eq (fb) [ v ; v' ] = NoFuncBlock [owise] .
+	*** Pass the function block of certain object, and change the name if necessary.
+	op _[_-_] : FuncBlock Object Object -> FuncBlock [ctor] .
+	eq (fb [ o ; c ] fl) [ o - o' ] = [ o' ; c ] fl .
+	eq (fb) [ o - o' ] = NoFuncBlock [owise] .
 
 endfm
 
 fmod IMP-SCRIPT is
 
-	*** Define a script and related syntax.
+	*** Define a script and the execution sorts.
 
 	protecting IMP-FUNCBLOCKS .
 
-	*** Define a script
+	*** Define a script.
 	sort Script .
 	op main{_} : Prog -> Script [ctor] .
 	op main{_}_ : Prog FuncList -> Script [ctor] .
@@ -276,15 +271,95 @@ fmod IMP-SCRIPT is
 	op main{_}__ : Prog FuncList ClassList -> Script [ctor] .
 
 	*** Define an execution.
-	sort Execution AritExecution BoolExecution .
-	subsort AritExp < AritExecution .
-	subsort BoolExp < BoolExecution .
-	op exec _ : Script -> Execution [ctor] .
-	op <_,_,_,_> : Prog FuncBlock ClassList Memory -> Execution [ctor] .
-	op <_,_,_,_> : AritExp FuncBlock ClassList Memory -> AritExecution [ctor] .
-	op <_,_,_,_> : BoolExp FuncBlock ClassList Memory -> BoolExecution [ctor] .
+	sorts Exec AritExec BoolExec .
+	subsort AritExp < AritExec .
+	subsort BoolExp < BoolExec .
+	op exec _ : Script -> Exec [ctor] .
+	op <_,_,_,_> : Prog FuncBlock ClassList Memory -> Exec [ctor] .
+	op <_,_,_,_> : AritExp FuncBlock ClassList Memory -> AritExec [ctor] .
+	op <_,_,_,_> : BoolExp FuncBlock ClassList Memory -> BoolExec [ctor] .
+
+	***(
+	*** An object can only be created in the main{} part, so a function execution
+	*** will not have a ClassList argument.
+	sorts FuncExec FuncAritExec FuncBoolExec .
+	op <_,_,_> : Prog FuncBlock Memory -> FuncExec [ctor] .
+	op <_,_,_> : AritExp FuncBlock Memory -> FuncAritExec [ctor] .
+	op <_,_,_> : BoolExp FuncBlock Memory -> FuncBoolExec [ctor] .
+	)
 
 endfm
+
+fmod PRE-EXECUTION is
+	
+	*** This module specifies how to give a function call a personalized execution:
+	*** the personalize operator will give each function call its own memory and function
+	*** blocks.
+
+	protecting IMP-SCRIPT .
+
+	var n : Int .
+	var v : NumVar .
+	var f : FuncName .
+	var arl : ArgList .
+	vars fb fb' : FuncBlock .
+	var fl : FuncList .
+	var il : InputList .
+	vars P P' : Prog .
+	vars cl cl' : ClassList .
+	vars M M' : Memory .
+	vars o o' : Object .
+	var c : ClassName .
+	var S : Stack .
+	var oi : ObjectId .
+
+	***(
+	*** personalize operator can only receive a list with numbers or objects.
+	sorts Type TypeList .
+	subsort Type < TypeList .
+	subsort Int < Type .
+	subsort Object < Type .
+	***subsort TypeList < ArgList .
+	op NoType : -> TypeList [ctor] .
+	op _,_ : TypeList TypeList -> TypeList [ctor assoc id: void] .
+	)
+
+	op personalize [_;_;_;_,_,_;_] : InputList ArgList ObjectId FuncBlock ClassList Memory Exec -> Exec [ctor] .
+
+	*** Copy all the main functions.
+	***(
+	eq personalize [ il ; tl ; oi ; fb ([main] (fl)), cl, M ; < P', fb', cl', M' > ] = 
+		personalize [ il ; tl ; oi ; fb, cl, M ; < P', fb' ([main] (fl)), cl', M' > ] .
+	)
+	
+	*** Copy all object functions and variables in case an object is passed.	
+	eq personalize [ (o', il) ; (o, arl) ; oi ; fb ([ o ; c] fl), cl, M ([ o ; c ] S) ; < P', fb', cl', M' > ] = 
+		personalize [ il ; arl ; oi ; fb, cl, M ; < P', fb' ([ o' ; c ] fl), cl', M' ([ o' ; c ] S) > ] .
+
+	*** Set the correct main memory in case a number is passed.
+	eq personalize [ (v, il) ; (n, arl) ; oi ; fb, cl, M ; < P', fb', cl', M' > ] = 
+		personalize [ il ; arl ; oi ; fb, cl, M ; < P', fb', cl', M'[ v / n ] > ] .
+
+	*** When the input list is empty, add the object's methods and variables in case the 
+	*** function was called by an object.
+	eq personalize [ void ; void ; [ o ; c ] ; fb ([ o ; c ] fl), cl, M ([ o ; c ] S) ; < P, fb', cl', M' > ] = 
+		personalize [ void ; void ; None ; fb, cl, M ; < P, fb' ([ this ; c ] fl), cl', M' ([ this ; c ] S) > ] .
+
+	*** Lastly, return the FuncExec.
+	eq personalize [ void ; void ; None ; fb , cl , M ; < P, fb', cl', M' > ] = < P, fb', cl', M' > .
+
+endfm
+
+fmod POST-EXECUTION is
+
+	*** This module specifies how to update objects after a function executes.
+
+	protecting PRE-EXECUTION .
+
+
+endfm
+
+***(
 
 fmod IMP-GIVEMEMORY is
 	
@@ -374,7 +449,7 @@ fmod IMP-AFTEREXECUTION is
 	
 	*** Defines the operators to run after a function executes.
 
-	protecting IMP-GIVEFUNCTIONS .
+	protecting IMP-PERSONALIZED-EXECUTION .
 
 	var o : Object .
 	var c : ClassName .
@@ -398,7 +473,6 @@ fmod IMP-AFTEREXECUTION is
 
 endfm
 
-***(
 
 fmod IMP-FUNCTIONCALLS is
 
