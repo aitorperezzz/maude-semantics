@@ -65,6 +65,12 @@ rew exec ( main
 		} 
 	} ) .
 
+
+rew < 'a = 5, NoFuncBlock, class 'Ball { constructor('x) { ( this . 'w ) = 'x}}, NoMemory > .
+rew < 'z = new 'Ball ( 'a ), NoFuncBlock, class 'Ball { constructor('x) { ( this . 'w ) = 'x}}, [main] < 'a, 5 > > .
+rew < 'u = ( ( 'z . 'w ) + 1 ), NoFuncBlock, class 'Ball { constructor('x) { ( this . 'w ) = 'x}}, [main] < 'a, 5 > [ 'z ] < 'w, 5 > > .
+
+
 rew exec ( main 
 	{
 		( 'u = 2 ) ; 
