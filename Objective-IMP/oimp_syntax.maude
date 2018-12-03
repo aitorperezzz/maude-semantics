@@ -1,0 +1,333 @@
+fmod OBJECTIVEIMP-BASICS is
+
+	*** This module defines the basic sorts and syntax.
+
+	protecting QID .
+	protecting INT .
+
+	*** Define the types relevant to the language.
+	sorts NumVar Object ObjectVar Var .
+	subsort Qid < NumVar .
+	subsort Qid < Object .
+	subsort NumVar < Var .
+	subsort ObjectVar < Var .
+
+	*** Define the arithmetic expressions.
+	sort AritExp .
+	subsort Int < AritExp .
+	subsort Var < AritExp .
+	op _+_ : AritExp AritExp -> AritExp [ditto] .
+	op _-_ : AritExp AritExp -> AritExp [ditto] .
+	op _*_ : AritExp AritExp -> AritExp [ditto] .
+
+	*** Define the boolean expressions.
+	sort BoolExp .
+	ops true false : -> BoolExp [ctor] .
+	op _==_ : AritExp AritExp -> BoolExp [comm] .
+	op _!=_ : AritExp AritExp -> BoolExp [comm] .
+	op _leq_ : AritExp AritExp -> BoolExp .
+	op _geq_ : AritExp AritExp -> BoolExp .
+	op not_ : BoolExp -> BoolExp .
+	op _and_ : BoolExp BoolExp -> BoolExp [assoc comm] .
+	op _or_ : BoolExp BoolExp -> BoolExp [assoc comm] .
+
+	*** Define the statement type.
+	sort Prog .
+	op skip : -> Prog [ctor] .
+	op _=_ : Var AritExp -> Prog [ctor] .
+	op _;_ : Prog Prog -> Prog [ctor assoc] .
+	op if (_) {_} else {_} : BoolExp Prog Prog -> Prog [ctor] .
+	op while (_) {_} : BoolExp Prog -> Prog [ctor] .
+	op return _ : AritExp -> Prog [ctor] .
+
+endfm
+
+fmod OBJECTIVEIMP-FUNCTIONS-SYNTAX is
+	
+	*** This module gives some definitions for the functions.
+
+	protecting OBJECTIVEIMP-BASICS .
+
+	*** Define what can be used to write a function, which are variables or objects.
+	sorts Input InputList .
+	subsort Input < InputList .
+	subsort Object < Input .
+	subsort NumVar < Input .
+	op void : -> Object [ctor] .
+	op _,_ : InputList InputList -> InputList [ctor assoc id: void] .
+
+	*** Define a list of what can be passed to a function: arithmetic expressions 
+	*** or objects.
+	sorts Arg ArgList .
+	subsort Arg < ArgList .
+	subsort InputList < ArgList .
+	subsort AritExp < Arg .
+	subsort Object < Arg .
+	op _,_ : ArgList ArgList -> ArgList [ditto] .
+
+	*** Define the Func type.
+	sorts FuncName Func .
+	subsort Qid < FuncName .
+
+	*** Specify how to declare a function.
+	op function _ (_) {_} : FuncName InputList Prog -> Func [ctor] .
+	
+	*** There are two ways to call a function: with a return value or without it.
+	op _(_) : FuncName ArgList -> AritExp [ctor] .
+	op run _(_) : FuncName ArgList -> Prog [ctor] .
+
+	*** Define a list of functions.
+	sort FuncList .
+	subsort Func < FuncList .
+	op NoFunc : -> FuncList [ctor] .
+	op __ : FuncList FuncList -> FuncList [ctor assoc comm id: NoFunc] .
+
+endfm
+
+fmod OBJECTIVEIMP-OBJECTS-SYNTAX is
+
+	*** This module gives some definitions for the objects.
+
+	protecting OBJECTIVEIMP-FUNCTIONS-SYNTAX .
+
+	sorts Class ClassName .
+	subsort Qid < ClassName .
+
+	*** Declare a class.
+	op class _ {_} : ClassName FuncList -> Class [ctor] .
+
+	*** A special function in a class is the constructor function.
+	op constructor(_) {_} : InputList Prog -> Func [ctor] .
+
+	*** Define a list of class declarations (which will be put at the end of a script).
+	sort ClassList .
+	subsort Class < ClassList .
+	op NoClass : -> ClassList [ctor] .
+	op __ : ClassList ClassList -> ClassList [ctor assoc comm id: NoClass] .
+
+	*** Create an object with a defined class.
+	op _ = new _ (_) : Object ClassName ArgList -> Prog [ctor] .
+
+	*** Define the object variables.
+	op this : -> Object [ctor] .
+	op _ . _ : Object NumVar -> ObjectVar [ctor] .
+
+	*** Define the object functions (called methods), which also can be called in 
+	*** two different ways, with and without return value.
+	op _ . _(_) : Object FuncName ArgList -> AritExp [ctor] .
+	op run _ . _(_) : Object FuncName ArgList -> Prog [ctor] .
+
+	*** Define an object identifier.
+	sort ObjectId .
+	op [_] : Object -> ObjectId [ctor] .
+	op None : -> ObjectId [ctor] .
+
+endfm
+
+fmod OBJECTIVEIMP-STACK is
+
+	*** This module specifies the Stack, which is a long list of 
+	*** variable-value pairs. There is a main Stack, and also each object
+	*** initialized has its own Stack.
+
+	protecting OBJECTIVEIMP-OBJECTS-SYNTAX .
+
+	vars n n' : Int .
+	vars v v' : NumVar .
+	var S : Stack .
+	
+	sorts StackCell Stack .
+	subsort StackCell < Stack .
+
+	op <_,_> : NumVar Int -> StackCell [ctor] .
+
+	op NoStack : -> Stack [ctor] .
+	op __ : Stack Stack -> Stack [ctor comm assoc id: NoStack] .
+
+	*** Change values or add elements to the stack.
+	op _[_/_] : Stack NumVar Int -> Stack .
+	eq (S < v, n >) [v / n'] = S < v, n' > .
+	eq S [v / n] = S < v, n > [owise] .
+
+	*** Access the value of a variable in the stack, if it is there.
+	op _[_] : Stack NumVar ~> Int .
+	eq (S < v, n >) [v] = n .
+
+endfm
+
+fmod OBJECTIVEIMP-MEMORY is
+	
+	*** This module specifies the Memory: first a Stack of main variables followed by a 
+	*** Stack for each object defined.
+
+	protecting OBJECTIVEIMP-STACK .
+
+	vars n n' : Int .
+	var c : ClassName .
+	vars o o' : Object .
+	var v : NumVar .
+	var M : Memory .
+	var S : Stack .
+
+	*** Define the Memory type and the grouping of different Memory types.
+	sort Memory .
+	op [main] _ : Stack -> Memory [ctor] .
+	op __ : ObjectId Stack -> Memory [ctor] .
+	op NoMemory : -> Memory [ctor] .
+	op __ : Memory Memory -> Memory [ctor assoc comm id: NoMemory] .
+	eq NoMemory = ( [main] NoStack ) .
+
+	*** Access elements in memory.
+	*** Global variables.
+	op _[_] : Memory NumVar ~> Int [ctor] .
+	eq (M [main] ( S < v, n > ) ) [v] = n .
+	*** Object variables.
+	op _[_] : Memory ObjectVar ~> Int [ctor] .
+	eq (M [ o ] ( S < v, n > ) ) [ ( o . v ) ] = n .
+
+	*** Change or add elements to memory.
+	*** Global variables.
+	op _[_/_] : Memory NumVar Int -> Memory [ctor] .
+	eq (M ([main] S) ) [v / n'] = M ([main] (S [ v / n' ]) ) .
+	eq M [v / n] = M ([main] < v, n > ) [owise] .
+	*** Object variables.
+	op _[_/_] : Memory ObjectVar Int -> Memory [ctor] .
+	eq (M [ o ] S) [ ( o . v )  / n'] = M [ o ] (S[ v / n' ]) .
+	eq M [ ( o . v ) / n] = M ([ o ] < v, n >) [owise] .
+
+endfm
+
+fmod OBJECTIVEIMP-FUNCBLOCKS is
+	
+	*** This module defines the function blocks and gives operators to manipulate them.
+	*** The design is similar to Memory.
+
+	protecting OBJECTIVEIMP-MEMORY .
+
+	var fb : FuncBlock .
+	vars o o' : Qid .
+	var c : ClassName .
+	var fl : FuncList .
+
+	sort FuncBlock .
+	op [main] _ : FuncList -> FuncBlock [ctor] .
+	op  __ : ObjectId FuncList -> FuncBlock [ctor] .
+	op NoFuncBlock : -> FuncBlock [ctor] .
+	op __ : FuncBlock FuncBlock -> FuncBlock [ctor assoc comm id: NoFuncBlock] .
+
+	eq NoFuncBlock = ([main] NoFunc) .
+
+endfm
+
+fmod OBJECTIVEIMP-SCRIPT is
+
+	*** Define a script and the execution sorts.
+
+	protecting OBJECTIVEIMP-FUNCBLOCKS .
+
+	*** Define a script. The function definitions have to come first when writing 
+	*** a script.
+	sort Script .
+	op main{_} : Prog -> Script [ctor] .
+	op main{_}_ : Prog FuncList -> Script [ctor] .
+	op main{_}_ : Prog ClassList -> Script [ctor] .
+	op main{_}__ : Prog FuncList ClassList -> Script [ctor] .
+
+	*** Define an execution.
+	sorts Exec AritExec BoolExec .
+	subsort AritExp < AritExec .
+	subsort BoolExp < BoolExec .
+	op exec _ : Script -> Exec [ctor] .
+	op <_,_,_,_> : Prog FuncBlock ClassList Memory -> Exec [ctor] .
+	op <_,_,_,_> : AritExp FuncBlock ClassList Memory -> AritExec [ctor] .
+	op <_,_,_,_> : BoolExp FuncBlock ClassList Memory -> BoolExec [ctor] .
+
+endfm
+
+fmod OBJECTIVEIMP-PRE-EXECUTION is
+	
+	*** This module specifies how to give a function call a personalized execution:
+	*** the preExec operator will give each function call its own memory and function
+	*** blocks.
+
+	protecting OBJECTIVEIMP-SCRIPT .
+
+	var n : Int .
+	var v : NumVar .
+	var f : FuncName .
+	var arl : ArgList .
+	vars fb fb' : FuncBlock .
+	var fl : FuncList .
+	var il : InputList .
+	vars P P' : Prog .
+	vars cl cl' : ClassList .
+	vars M M' : Memory .
+	vars o o' : Object .
+	var c : ClassName .
+	var S : Stack .
+	var oi : ObjectId .
+	var ot : ObjTrackList .
+
+	*** When a function is called, we need to keep track of the objects' name outside and 
+	*** inside the function. Define the ObjTrack sort.
+	sorts ObjTrack ObjTrackList .
+	op {_,_} : Object Object -> ObjTrack [ctor] .
+	subsort ObjTrack < ObjTrackList .
+	op NoTrack : -> ObjTrackList [ctor] .
+	op __ : ObjTrackList ObjTrackList -> ObjTrackList [ctor assoc comm id: NoTrack] .
+
+	*** Define a pair of execution and GlobalLocalList.
+	sort Personal .
+	op {_,_} : ObjTrackList Exec -> Personal .
+
+	op preExec [_;_;_;_,_,_;_,_] : InputList ArgList ObjectId FuncBlock ClassList Memory ObjTrackList Exec -> Personal [ctor] .
+	
+	*** Copy all object functions and variables in case an object is passed. In this case, update the list 
+	*** of global and local names of objects.	
+	eq preExec [ (o', il) ; (o, arl) ; oi ; fb ([ o ] fl), cl, M ([ o ] S) ; ot, < P', fb', cl', M' > ] = 
+		preExec [ il ; arl ; oi ; fb, cl, M ; (ot { o , o' }), < P', fb' ([ o' ] fl), cl', M' ([ o' ] S) > ] .
+
+	*** Set the correct main memory in case a number is passed.
+	eq preExec [ (v, il) ; (n, arl) ; oi ; fb, cl, M ; ot, < P', fb', cl', M' > ] = 
+		preExec [ il ; arl ; oi ; fb, cl, M ; ot, < P', fb', cl', M'[ v / n ] > ] .
+
+	*** When the input list is empty, add the object's methods and variables in case the 
+	*** function was called by an object.
+	eq preExec [ void ; void ; [ o ] ; fb ([ o ] fl), cl, M ([ o ] S) ; ot, < P, fb', cl', M' > ] = 
+		preExec [ void ; void ; None ; fb ([ o ] fl), cl, M ; ot, < P, fb' ([ this ] fl), cl', M' ([ this ] S) > ] .
+
+	*** Lastly, return all the information.
+	eq preExec [ void ; void ; None ; fb , cl , M ; ot, < P, fb', cl', M' > ] = { ot, < P, fb', cl', M' > } .
+
+endfm
+
+fmod OBJECTIVEIMP-POST-EXECUTION  is
+
+	*** This module specifies how to update objects after a function executes. This can only be inside a 
+	*** "run" type of function.
+
+	protecting OBJECTIVEIMP-PRE-EXECUTION  .
+
+	vars o o' : Object .
+	var ot : ObjTrackList .
+	vars M M' : Memory .
+	vars S S' : Stack .
+
+	op postExec [_,_;_/_] : ObjTrackList ObjectId Memory Memory -> Memory [ctor] .
+	
+	*** If an object called a function, update the Stack.
+	eq postExec [ ot, [ o ] ; M ([ o ] S) / M' ([ this ] S') ] = 
+		postExec [ ot, None ; M ([ o ] S') / M' ] .
+	
+	*** For each object inside the global-local list, update the global variables.
+	eq postExec [ ( { o, o' } ot), None ; M ([ o ] S) / M' ([ o' ] S') ] = 
+		postExec [ ot, None ; M ([ o ] S') / M' ] .
+	
+	*** Return the updated memory when all the input is empty.
+	eq postExec [ NoTrack, None ; M / M' ] = M . 
+
+endfm
+
+
+
+

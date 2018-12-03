@@ -1,0 +1,84 @@
+load oimp_semantics.maude .
+
+*** Test for the basic syntax part
+rew exec main
+	{ 
+		( 'a = 10 ) ; 
+		( 'times = 5 ) ; 
+		( 'result = 0 ) ; 
+		while ('times geq 1) {  
+			( 'result = ( 'result + 'a ) ) ; 
+			( 'times = ( 'times - 1 ) )  
+		}
+	} .
+
+
+*** Tests for functions
+rew exec ( main 
+	{
+		( 'a = 10 ) ; 
+		( 'b = 5 ) ;
+		( 'c = ( 'sum ( 'a, 'b ) ) )   
+	}
+	function 'sum ( 'x, 'y ) {
+			return ( 'x + 'y ) 
+	} ) .
+
+
+rew exec ( main { 
+		( 'n = 3 ) ; 
+		( 'f = ( 'factorial ('n) ) )  
+	} 
+	function 'factorial ('integer) { 
+		if ('integer geq 2) { 
+			return ( 'integer * ( 'factorial ( 'integer - 1 ) ) )   
+		} 
+		else {  
+			return 1 
+		} 
+	} ) .
+
+rew exec ( main 
+	{ 
+		( 'a = 5 ) ; 
+		( 'b = ( 'sum ('a, 1) ) ) ; 
+		( 'c = ( 'product ( 'b, ( 'sum('a, 2) ) ) ) )    
+	}
+	function 'sum ('x, 'y) { 
+		return ('x + 'y ) 
+	}
+	function 'product('x, 'y) { 
+		return ( 'x * 'y ) 
+	} ) .
+
+
+*** Tests for classes
+rew exec ( main 
+	{ 
+		( 'a = 5 ) ; 
+		( 'z = new 'Ball ( 'a ) ) ; 
+		( 'u = ( ( 'z . 'w ) + 1 ) ) 
+	} 
+	class 'Ball { 
+		constructor ( 'x ) { 
+			( this . 'w ) = 'x 
+		} 
+	} ) .
+
+rew exec ( main 
+	{
+		( 'u = 2 ) ; 
+		( 'w = 58 ) ; 
+		( 'z = new 'Pair ('u, 'w) ) ; 
+		( 'u = ( 'z . 'xpos ) + ( 'z . 'ypos ) )  
+	} 
+	class 'Pair {
+		constructor ('x, 'y) {
+			( ( this . 'xpos ) = 'x ) ; 
+			( ( this . 'ypos ) = 'y ) 
+		}
+	} ) . 
+
+
+
+
