@@ -110,12 +110,12 @@ fmod IMP-OBJECTS-DEF is
 
 	*** Define the object variables.
 	op this : -> Object [ctor] .
-	op _._ : Object NumVar -> ObjectVar [ctor] .
+	op _ . _ : Object NumVar -> ObjectVar [ctor] .
 
 	*** Define the object functions (called methods), which also can be called in 
 	*** two different ways.
-	op (_._)(_) : Object FuncName ArgList -> AritExp [ctor] .
-	op run (_._)(_) : Object FuncName ArgList -> Prog [ctor] .
+	op (_ . _)(_) : Object FuncName ArgList -> AritExp [ctor] .
+	op run (_ . _)(_) : Object FuncName ArgList -> Prog [ctor] .
 
 	*** Define an object identifier.
 	sort ObjectId .
