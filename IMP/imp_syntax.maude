@@ -1,4 +1,51 @@
-load imp_utils.maude .
+fmod IMP-SORTS is
+
+	*** This module defines the sorts of the language.
+
+	protecting QID .
+	protecting INT .
+
+	sort Var .
+	subsort Qid < Var .
+
+	sort AritExp .
+	subsort Int < AritExp .	
+	subsort Var < AritExp .
+
+	sort BoolExp .
+
+	sort Prog .
+
+endfm
+
+fmod IMP-STACK is
+
+	*** This module specifies the stack, which is a list of variable-value pairs.
+
+	protecting IMP-SORTS .
+	
+	var S : Stack .
+	vars n n' : Int .
+	var v : Var .
+	
+	sorts StackCell Stack .
+	subsort StackCell < Stack .
+
+	op <_,_> : Var Int -> StackCell [ctor] .
+
+	op NoStack : -> Stack [ctor] .
+	op __ : Stack Stack -> Stack [ctor comm assoc id: NoStack] .
+
+	*** Change or add elements to the stack.
+	op _[_/_] : Stack Var Int -> Stack .
+	eq (S < v, n >) [v / n'] = S < v, n' > .
+	eq S [v / n] = S < v, n > [owise] .
+
+	*** Access an element in the stack, if it is there.
+	op _[_] : Stack Var ~> Int .
+	eq (S < v, n >) [v] = n .
+
+endfm
 
 fmod IMP-BASIC-SYNTAX is
 
@@ -23,13 +70,11 @@ fmod IMP-BASIC-SYNTAX is
 
 	*** Syntax of statements.
 	op skip : -> Prog [ctor] .
-	op _=_ : NumVar AritExp -> Prog [ctor prec 30] .
-	op _=_ : ArrayVar Array -> Prog [ctor] .
+	op _=_ : Var AritExp -> Prog [ctor prec 30] .
 	op _;_ : Prog Prog -> Prog [ctor assoc] .
 	op if (_) {_} else {_} : BoolExp Prog Prog -> Prog [ctor] .
 	op while (_) {_} : BoolExp Prog -> Prog [ctor] .
 	op return _ : AritExp -> Prog [ctor] .
-	op return _ : Array -> Prog [ctor] .
 
 endfm
 
@@ -40,22 +85,18 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	protecting IMP-BASIC-SYNTAX .
 
 	*** Define lists of variables for the definition of a function.
-	*** Only variables and arrays.
 	sort VarList .
-	subsort NumVar < VarList .
-	subsort ArrayVar < VarList .
+	subsort Var < VarList .
 	op void : -> VarList [ctor] .
 	op _,_ : VarList VarList -> VarList [ctor assoc id: void] .
 
-	*** Define lists of what can be passed to the function on a function call.
-	sorts Arg ArgList .
-	subsort Arg < ArgList .
-	subsort AritExp < Arg .
-	subsort ArrayVar < Arg .
-	subsort VarList < ArgList .
-	op _,_ : ArgList ArgList -> ArgList [ctor assoc id: void] .
+	*** Define lists of what can be passed to a function: arithmetic expressions.
+	sort AritExpList .
+	subsort AritExp < AritExpList .
+	subsort VarList < AritExpList .
+	op _,_ : AritExpList AritExpList -> AritExpList [ctor assoc id: void] .
 	
-	*** Define the Func type.
+	*** Define the function sort.
 	sorts FuncName Func .
 	subsort Qid < FuncName .
 
@@ -63,7 +104,7 @@ fmod IMP-FUNCTIONS-SYNTAX is
 	op function _ (_) {_} : FuncName VarList Prog -> Func [ctor] .
 
 	*** Syntax of a function call.
-	op _(_) : FuncName AritExp -> AritExp [ctor] .  
+	op _(_) : FuncName AritExpList -> AritExp [ctor] .  
 
 endfm
 
@@ -92,18 +133,33 @@ fmod IMP-GIVESTACK is
 
 	protecting IMP-SCRIPT .
 
-	vars v b : Var .
-	var vl : VarList .
-	var arl : ArgList .
-	var n : Int .
 	var S : Stack .
+	var fl : FuncList .
 
-	op giveStack [___] : VarList ArgList Stack -> Stack [ctor] .
+	op giveStack [__;_;_] : VarList AritExpList FuncList Stack -> Stack [ctor] .
 
-	*** The semantics will specify how this operator works.
-	***eq giveStack [ ( v, vl ) ( b, al ) S ] = < v, S [ b ] > giveStack [ vl al S ] .
-	***eq giveStack [ ( v, vl ) ( n, al ) S ] = < v, n > giveStack [ vl al S ] .
-	eq giveStack [ ( void ) ( void ) S ] = NoStack . 
+	*** Look in the semantics file for the semantics of this operator.
+	
+	*** Return the empty stack when there is no input left.
+	eq giveStack [ ( void ) ( void ) ; fl ; S ] = NoStack . 
+
+endfm
+
+fmod IMP-EXECUTION is 
+
+	*** This module specifies how to write a script, and the main exec sorts.
+
+	protecting IMP-GIVESTACK .
+
+	sorts Exec AritExec BoolExec .
+	subsort AritExp < AritExec .
+	subsort BoolExp < BoolExec .
+
+	op exec_ : Script -> Exec [ctor] .
+
+	op <_,_,_> : Prog FuncList Stack -> Exec [ctor] .
+	op <_,_,_> : AritExp FuncList Stack -> AritExec [ctor] .
+	op <_,_,_> : BoolExp FuncList Stack -> BoolExec [ctor] .
 
 endfm
 
