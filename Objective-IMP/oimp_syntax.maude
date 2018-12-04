@@ -276,35 +276,27 @@ fmod OBJECTIVEIMP-PRE-EXECUTION is
 	op NoTrack : -> ObjTrackList [ctor] .
 	op __ : ObjTrackList ObjTrackList -> ObjTrackList [ctor assoc comm id: NoTrack] .
 
-	*** Define a pair of execution and GlobalLocalList.
-	sort Personal .
-	op {_,_} : ObjTrackList Exec -> Personal .
-
-	op preExec [_;_;_;_,_,_;_,_] : InputList ArgList ObjectId FuncBlock ClassList Memory ObjTrackList Exec -> Personal [ctor] .
+	op preExec [_;_;_;_;_,_,_/_,_,_,_] : InputList ArgList ObjectId ObjTrackList FuncBlock ClassList Memory Prog FuncBlock ClassList Memory -> Exec [ctor] .
 	
-	*** Copy all object functions and variables in case an object is passed. In this case, update the list 
-	*** of global and local names of objects.	
-	eq preExec [ (o', il) ; (o, arl) ; oi ; fb ([ o ] fl), cl, M ([ o ] S) ; ot, < P', fb', cl', M' > ] = 
-		preExec [ il ; arl ; oi ; fb, cl, M ; (ot { o , o' }), < P', fb' ([ o' ] fl), cl', M' ([ o' ] S) > ] .
+	*** When an object is passed to a function, pass all its functions and variables, and update the track list 
+	*** of objects.
+	eq preExec [ (o', il) ; (o, arl) ; oi ; ot ; fb ([ o ] fl), cl, M ([ o ] S) / P', fb', cl', M' ] = 
+		preExec [ il ; arl ; oi ; ot { o , o' } ; fb ([ o ] fl), cl, M ([ o ] S) / P', fb' ([ o' ] fl), cl', M' ([ o' ] S) ] .
 
-	*** Set the correct main memory in case a number is passed.
-	eq preExec [ (v, il) ; (n, arl) ; oi ; fb, cl, M ; ot, < P', fb', cl', M' > ] = 
-		preExec [ il ; arl ; oi ; fb, cl, M ; ot, < P', fb', cl', M'[ v / n ] > ] .
+	*** When a number is passed, update the main memory inside the function.
+	eq preExec [ (v, il) ; (n, arl) ; oi ; ot ; fb, cl, M / P', fb', cl', M' ] = 
+		preExec [ il ; arl ; oi ; ot ; fb, cl, M / P', fb', cl', M'[ v / n ] ] .
 
-	*** When the input list is empty, add the object's methods and variables in case the 
-	*** function was called by an object.
-	eq preExec [ void ; void ; [ o ] ; fb ([ o ] fl), cl, M ([ o ] S) ; ot, < P, fb', cl', M' > ] = 
-		preExec [ void ; void ; None ; fb ([ o ] fl), cl, M ; ot, < P, fb' ([ this ] fl), cl', M' ([ this ] S) > ] .
-
-	*** Lastly, return all the information.
-	eq preExec [ void ; void ; None ; fb , cl , M ; ot, < P, fb', cl', M' > ] = { ot, < P, fb', cl', M' > } .
+	*** In case the input list is empty and an object called its own method, pass its variables and functions 
+	*** in the "this" block.
+	eq preExec [ void ; void ; [ o ] ; ot ; fb ([ o ] fl), cl, M ([ o ] S) / P', fb', cl', M' ] = 
+		preExec [ void ; void ; None ; ot { o, this } ; fb ([ o ] fl), cl, M ([ o ] S) / P', fb' ([ this ] fl), cl', M' ([ this ] S) ] .
 
 endfm
 
 fmod OBJECTIVEIMP-POST-EXECUTION  is
 
-	*** This module specifies how to update objects after a function executes. This can only be inside a 
-	*** "run" type of function.
+	*** This module specifies how to update objects after a function executes.
 
 	protecting OBJECTIVEIMP-PRE-EXECUTION  .
 
@@ -312,18 +304,19 @@ fmod OBJECTIVEIMP-POST-EXECUTION  is
 	var ot : ObjTrackList .
 	vars M M' : Memory .
 	vars S S' : Stack .
+	var oi : ObjectId .
 
 	op postExec [_,_;_/_] : ObjTrackList ObjectId Memory Memory -> Memory [ctor] .
 	
-	*** If an object called a function, update the Stack.
-	eq postExec [ ot, [ o ] ; M ([ o ] S) / M' ([ this ] S') ] = 
-		postExec [ ot, None ; M ([ o ] S') / M' ] .
+	*** For each object inside the object-tracking list, update the global variables.
+	eq postExec [ ( { o, o' } ot), oi ; M ([ o ] S) / M' ([ o' ] S') ] = 
+		postExec [ ot, oi ; M ([ o ] S') / M' ] .
+
+	*** If an object called its own method, update its memory stack.
+	eq postExec [ NoTrack, [ o ] ; M ([ o ] S) / M' ([ this ] S') ] = 
+		postExec [ NoTrack, None ; M ([ o ] S') / M' ] .
 	
-	*** For each object inside the global-local list, update the global variables.
-	eq postExec [ ( { o, o' } ot), None ; M ([ o ] S) / M' ([ o' ] S') ] = 
-		postExec [ ot, None ; M ([ o ] S') / M' ] .
-	
-	*** Return the updated memory when all the input is empty.
+	*** Return the memory when all the input is empty.
 	eq postExec [ NoTrack, None ; M / M' ] = M . 
 
 endfm
