@@ -141,7 +141,7 @@ fmod IMP-GIVESTACK is
 	*** Look in the semantics file for the semantics of this operator.
 	
 	*** Return the empty stack when there is no input left.
-	eq giveStack [ ( void ) ( void ) ; fl ; S ] = NoStack . 
+	eq giveStack [ void void ; fl ; S ] = NoStack . 
 
 endfm
 

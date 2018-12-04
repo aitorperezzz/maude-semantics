@@ -151,8 +151,8 @@ mod IMP-FUNCTIONS-SEMANTICS is
 
 	*** Give a personalised stack to a function call.
 	crl [function-givestack] : < f ( al ), fl function f (vl) {P}, S > => S''[ 'return ] if 
-		giveStack [ vl al ; fl ; S ] => S' /\ 
+		giveStack [ vl al ; fl function f (vl) {P} ; S ] => S' /\ 
 		< P, fl function f (vl) {P}, S' > => 
-		< skip, fl function f (vl) {P}, S'' > .	
+		< skip, fl function f (vl) {P}, S'' > .
 
 endm
