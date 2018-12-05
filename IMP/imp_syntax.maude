@@ -1,6 +1,6 @@
 fmod IMP-SORTS is
-
-	*** This module defines the sorts of the language.
+	
+	*** This module specifies the sorts of the language.
 
 	protecting QID .
 	protecting INT .
@@ -8,9 +8,9 @@ fmod IMP-SORTS is
 	sort Var .
 	subsort Qid < Var .
 
-	sort AritExp .
-	subsort Int < AritExp .	
+	sort AritExp . 
 	subsort Var < AritExp .
+	subsort Int < AritExp .
 
 	sort BoolExp .
 
@@ -18,17 +18,18 @@ fmod IMP-SORTS is
 
 endfm
 
-fmod IMP-STACK is
+fmod IMP-STACK is 
 
-	*** This module specifies the stack, which is a list of variable-value pairs.
+	*** This module specifies the stack for the language: a list of variable-value
+	*** pairs.
 
 	protecting IMP-SORTS .
-	
-	var S : Stack .
+
 	vars n n' : Int .
-	var v : Var .
-	
-	sorts StackCell Stack .
+	vars v v' : Var .
+	var S : Stack .
+
+	sort StackCell Stack .
 	subsort StackCell < Stack .
 
 	op <_,_> : Var Int -> StackCell [ctor] .
@@ -36,130 +37,123 @@ fmod IMP-STACK is
 	op NoStack : -> Stack [ctor] .
 	op __ : Stack Stack -> Stack [ctor comm assoc id: NoStack] .
 
-	*** Change or add elements to the stack.
+	*** Add elements to the stack or change them.
 	op _[_/_] : Stack Var Int -> Stack .
 	eq (S < v, n >) [v / n'] = S < v, n' > .
 	eq S [v / n] = S < v, n > [owise] .
 
-	*** Access an element in the stack, if it is there.
+	*** Access a value in the stack.
 	op _[_] : Stack Var ~> Int .
 	eq (S < v, n >) [v] = n .
 
 endfm
 
+
 fmod IMP-BASIC-SYNTAX is
 
-	*** This module specifies the basic syntax.
+	*** This module specifies the basic syntax of the language: how to build arithmetic 
+	*** and boolean expressions, and how to build statements.
 
 	protecting IMP-STACK .
 
 	*** Syntax of arithmetic expressions.
 	op _+_ : AritExp AritExp -> AritExp [ditto] .
-	op _-_ : AritExp AritExp -> AritExp [ditto] .
 	op _*_ : AritExp AritExp -> AritExp [ditto] .
+	op _-_ : AritExp AritExp -> AritExp [ditto] .
 
-	*** Syntax of boolean expresions.
+	*** Syntax of boolean expressions.
 	ops true false : -> BoolExp [ctor] .
-	op _==_ : AritExp AritExp -> BoolExp [comm prec 26] .
-	op _!=_ : AritExp AritExp -> BoolExp [comm prec 26] .
-	op _leq_ : AritExp AritExp -> BoolExp .
-	op _geq_ : AritExp AritExp -> BoolExp .
+	op _==_ : AritExp AritExp -> BoolExp [ctor] .
+	op _!=_ : AritExp AritExp -> BoolExp [ctor] .
+	op _leq_ : AritExp AritExp -> BoolExp [ctor].
+	op _geq_ : AritExp AritExp -> BoolExp [ctor] .
+	op _and_ : BoolExp BoolExp -> BoolExp [ctor] .
+	op _or_ : BoolExp BoolExp -> BoolExp [ctor] .
 	op not_ : BoolExp -> BoolExp .
-	op _and_ : BoolExp BoolExp -> BoolExp [assoc comm] .
-	op _or_ : BoolExp BoolExp -> BoolExp [assoc comm] .
 
 	*** Syntax of statements.
 	op skip : -> Prog [ctor] .
-	op _=_ : Var AritExp -> Prog [ctor prec 30] .
+	op _=_ : Var AritExp -> Prog [ctor prec 31] .
 	op _;_ : Prog Prog -> Prog [ctor assoc] .
 	op if (_) {_} else {_} : BoolExp Prog Prog -> Prog [ctor] .
 	op while (_) {_} : BoolExp Prog -> Prog [ctor] .
-	op return _ : AritExp -> Prog [ctor] .
 
 endfm
 
-fmod IMP-FUNCTIONS-SYNTAX is
+fmod IMP-FUNCTIONS-SYNTAX is 
 
 	*** This module specifies the syntax of function calls.
-	
+
 	protecting IMP-BASIC-SYNTAX .
 
-	*** Define lists of variables for the definition of a function.
-	sort VarList .
+	*** Define a list of variables, which will be used in the declaration of a function.
+	sort VarList  .
 	subsort Var < VarList .
 	op void : -> VarList [ctor] .
 	op _,_ : VarList VarList -> VarList [ctor assoc id: void] .
 
-	*** Define lists of what can be passed to a function: arithmetic expressions.
+	*** Define a list of what can be passed when calling a function: a list of 	
+	*** arithmetic expressions.
 	sort AritExpList .
 	subsort AritExp < AritExpList .
 	subsort VarList < AritExpList .
 	op _,_ : AritExpList AritExpList -> AritExpList [ctor assoc id: void] .
 	
-	*** Define the function sort.
-	sorts FuncName Func .
+	*** Define the Func sort.
+	sorts Func FuncName .
 	subsort Qid < FuncName .
 
-	*** How to write a function.
+	*** Syntax for declaring a function.
 	op function _ (_) {_} : FuncName VarList Prog -> Func [ctor] .
+	
+	*** Syntax for calling a function.
+	op _(_) : FuncName AritExpList -> AritExp [ctor] .
 
-	*** Syntax of a function call.
-	op _(_) : FuncName AritExpList -> AritExp [ctor] .  
+	*** Inside a function, specify which value it has to return.
+	op return _ : AritExp -> Prog [ctor] .
 
 endfm
 
 fmod IMP-SCRIPT is
-	
-	*** Define the sort Script.
+
+	*** This module specifies how to write a script: a main set of statements followed by 
+	*** possibly a list of functions.
 
 	protecting IMP-FUNCTIONS-SYNTAX .
 
-	*** Define a list of functions to specify in the script.
+	*** Define a list of functions.
 	sort FuncList .
 	subsort Func < FuncList .
 	op NoFunc : -> FuncList [ctor] .
 	op __ : FuncList FuncList -> FuncList [ctor assoc comm id: NoFunc] .
 
+	*** Define the Script sort.
 	sort Script .
 	op main{_} : Prog -> Script [ctor] .
 	op main{_}_ : Prog FuncList -> Script [ctor] .
 
 endfm
 
-fmod IMP-GIVESTACK is
-	
-	*** This module specifies the operator to give each function its own
-	*** Stack for execution.
+fmod IMP-GIVESTACK is 
+
+	*** This module gives the definition of the giveStack operator, which will 
+	*** give each function call its own stack.
 
 	protecting IMP-SCRIPT .
 
+	var n : Int .
+	var v : Var .
+	var vl : VarList .
+	var al : AritExpList .
 	var S : Stack .
 	var fl : FuncList .
 
-	op giveStack [__;_;_] : VarList AritExpList FuncList Stack -> Stack [ctor] .
+	op giveStack [__;__] : VarList AritExpList FuncList Stack -> Stack [ctor] .
 
-	*** Look in the semantics file for the semantics of this operator.
+	*** When there's no input left, return the empty stack.
+	eq giveStack [ void void ; fl S ] = NoStack .
+
+endfm
+
+
 	
-	*** Return the empty stack when there is no input left.
-	eq giveStack [ void void ; fl ; S ] = NoStack . 
-
-endfm
-
-fmod IMP-EXECUTION is 
-
-	*** This module specifies how to write a script, and the main exec sorts.
-
-	protecting IMP-GIVESTACK .
-
-	sorts Exec AritExec BoolExec .
-	subsort AritExp < AritExec .
-	subsort BoolExp < BoolExec .
-
-	op exec_ : Script -> Exec [ctor] .
-
-	op <_,_,_> : Prog FuncList Stack -> Exec [ctor] .
-	op <_,_,_> : AritExp FuncList Stack -> AritExec [ctor] .
-	op <_,_,_> : BoolExp FuncList Stack -> BoolExec [ctor] .
-
-endfm
-

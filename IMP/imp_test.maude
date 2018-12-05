@@ -1,51 +1,66 @@
 load imp_semantics.maude .
 
-*** Test for the basic syntax part
-rew exec main
-	{ 
-		'a = 10 ; 
-		'times = 5 ; 
-		'result = 0 ; 
-		while ('times geq 1) { 
-			'result = ( 'result + 'a ) ; 
-			'times = ( 'times - 1 )
-		} 
-	} .
+*** This file contains some tests for functionality of the language.
 
-
-*** Tests for functions part
+*** Multiply two numbers.
 rew exec ( main 
-	{ 
-		( ( 'a = 10 ) ; 
-		( 'b = 5 ) ; 
-		( 'c = ( 'sum ( 'a, 'b ) ) ) )   
-	} 
-	function 'sum ( 'x, 'y ) {  
-			return ( 'x + 'y ) 
+	{  
+		'a = 2 ; 
+		'b = 10 * 'a 
 	} ) .
 
-rew exec ( main { 
-		'n = 3 ; 
-		'f = ( 'factorial('n) ) 
-	}  
-	function 'factorial('integer) { 
-		if ('integer geq 2) { 
-			return ( 'integer * ( 'factorial('integer - 1) ) ) 
-		} 
-		else { 
-			return 1 
-		} 
-	} ) .
-
-rew exec ( main { 
-		'a = 5 ; 
-		'b = ( 'sum('a, 1) ) ;
-		'c = ( 'product('b, ('sum('a, 2))) )  
+*** Multiply two numbers calling a function.
+rew exec ( main 
+	{
+		'a = 3 ; 
+		'b = 1 ; 
+		'c = ( 'product ('a, ( 2 * 'b ) ) ) 
 	}
-	function 'sum ('x, 'y) { 
-		return ('x + 'y) 
-	}
-	function 'product('x, 'y) { 
+	function 'product ('x, 'y) 
+	{
 		return ( 'x * 'y ) 
 	} ) .
-		
+
+*** When a function needs no arguments, void is passed.
+rew exec ( main 
+	{ 
+		'c = ( 'number ( void ) )  
+	}  
+	function 'number ( void )  
+	{ 
+		return ( 3 * 2 ) 
+	} ) .
+
+*** Test recursion with the factorial function.
+rew exec ( main 
+	{   
+		'a = 5 ; 
+		'f = ( 'factorial ( 'a ) ) 
+	} 
+ 	function 'factorial ( 'x ) 
+	{  
+		if ( 'x == 1 ) 
+		{ 
+			return 1 
+		} else { 
+			return ('x * ( 'factorial ( 'x - 1 ) ) ) 
+		} 
+	} ) .
+
+*** Test nested functions.
+rew exec ( main 
+	{ 
+		'a = 5 ; 
+		'b = 3 ;
+		'f = ( 'multiply ( 'a, 'b ) ) 
+	} 
+	function 'multiply ('x, 'y) 
+	{
+		return ( 'x * ( 'square('y) ) ) 
+	} 
+	function 'square ('x) 
+	{
+		return ('x * 'x) 
+	} ) . 
+
+
