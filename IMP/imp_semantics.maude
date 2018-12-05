@@ -1,0 +1,163 @@
+load imp_syntax.maude .
+
+mod IMP-INITIAL-PARSE is
+	
+	*** This module gives the initial parsing rules.
+
+	protecting IMP-GIVESTACK .
+
+	var P : Prog .
+	var fl : FuncList .
+
+	*** Define the different types of executions.
+	sorts Exec AritExec BoolExec .
+	subsort AritExp < AritExec .
+	subsort BoolExp < BoolExec .
+	op <_,_,_> : Prog FuncList Stack -> Exec [ctor] .
+	op <_,_,_> : AritExp FuncList Stack -> AritExec [ctor] .
+	op <_,_,_> : BoolExp FuncList Stack -> BoolExec [ctor] .
+	
+	*** This is how the user should write an execution.
+	op exec _ : Script -> Exec [ctor] .
+
+	*** Rewrite the user's input.
+	rl [initial-nofunc] : exec ( main {P} ) => < P, NoFunc, NoStack > .
+	rl [initial-default] : exec ( main {P} fl ) => < P, fl, NoStack > .
+
+endm
+
+mod IMP-BASIC-SEMANTICS is
+
+	*** This module gives the semantics of arithmetic and boolean operations, 
+	*** as well as the rules for the basic statements.
+
+	protecting IMP-INITIAL-PARSE .
+
+	vars m n : Int .
+	var v : Var .
+	vars S S' S'' : Stack .
+	vars A B : AritExp .
+	vars b b' : BoolExp .
+	vars P P' : Prog .
+	var fl : FuncList .
+	
+	*** Evaluation of a number.
+	rl [numbers] :  < n, fl, S > => n .
+
+	*** Evaluation of a variable.
+	rl [variables] : < v, fl, S > => S [v] .
+
+
+	*** Evaluation of arithmetic expressions.
+	crl [arit-sum] : < A + B, fl, S > => m + n 
+		if < A, fl, S > => m /\ < B, fl, S > => n .
+
+	crl [arit-sub] : < A - B, fl, S > => m - n 
+		if < A, fl, S > => m /\ < B, fl, S > => n .
+
+	crl [arit-prod] : < A * B, fl, S > => m * n  
+		if < A, fl, S > => m /\ < B, fl, S > => n .
+
+
+	*** Evaluation of boolean expressions.
+	rl [true] : < true, fl, S > => true .
+	rl [false] : < false, fl, S > => false .
+
+	crl [bool-equal-true] : < A == B, fl, S > => < true, fl, S >
+		if < A, fl, S > => m /\ < B, fl, S > => m .
+	crl [bool-equal-false] : < A == B, fl, S > => < false, fl, S >
+		if < A, fl, S > => m /\  < B, fl, S > => n /\ m =/= n  .
+
+	crl [bool-notequal-true] : < A != B, fl, S > => < true, fl, S >
+		if < A == B, fl, S > => < false, fl, S > .
+	crl [bool-notequal-false] : < A != B, fl, S > => < false, fl, S >
+		if < A == B, fl, S > => < true, fl, S >  .
+
+	crl [bool-leq-true] : < A leq B, fl, S > => < true, fl, S >
+		if < A, fl, S > => m  /\  < B, fl, S > => n /\ m <= n .
+	crl [bool-leq-false] : < A leq B, fl, S > => < false, fl, S > 
+		if < A, fl, S > => m /\ < B, fl, S > => n /\ m > n .
+
+	crl [bool-geq-true] : < A geq B, fl, S > => < true, fl, S >
+		if < A, fl, S > => m  /\  < B, fl, S > => n /\ m >= n .
+	crl [bool-geq-false] : < A geq B, fl, S > => < false, fl, S > 
+		if < A, fl, S > => m /\ < B, fl, S > => n /\ m < n .
+
+	crl [bool-not-true] : < not b, fl, S > => < true, fl, S >
+		if < b, fl, S > => < false, fl, S > .
+	crl [bool-not-false] : < not b, fl, S > => < false, fl, S >
+		if < b, fl, S > => < true, fl, S > . 
+
+	crl [bool-or-true] : < b or b', fl, S > => < true, fl, S > 
+		if < b, fl, S > => < true, fl, S > /\ < b', fl, S > => < true, fl, S > .
+	crl [bool-or-true] : < b or b', fl, S > => < true, fl, S > 
+		if < b, fl, S > => < true, fl, S > /\ < b', fl, S > => < false, fl, S > .
+	crl [bool-or-true] : < b or b', fl, S > => < true, fl, S > 
+		if < b, fl, S > => < false, fl, S > /\ < b', fl, S > => < true, fl, S > .
+	crl [bool-or-false] : < b or b', fl, S > => < false, fl, S >
+		if < b, fl, S > => < false, fl, S > /\ < b', fl, S > => < false, fl, S > .
+
+	crl [bool-and-true] : < b and b', fl, S > => < true, fl, S >
+		if < b, fl, S > => < true, fl, S > /\ < b', fl, S > => < true, fl, S > .
+	crl [bool-and-false] : < b and b', fl, S > => < false, fl, S >
+		if < b, fl, S > => < false, fl, S > /\ < b', fl, S > => < true, fl, S > .
+	crl [bool-and-false] : < b and b', fl, S > => < false, fl, S >
+		if < b, fl, S > => < true, fl, S > /\ < b', fl, S > => < false, fl, S > .
+	crl [bool-and-false] : < b and b', fl, S > => < false, fl, S >
+		if < b, fl, S > => < false, fl, S > /\ < b', fl, S > => < false, fl, S > .
+
+
+	*** Semantics of statements.
+	crl [prog-assign] : < v = A, fl, S > => < skip, fl, S[v / n] >
+		if < A, fl, S > => n .
+
+	crl [prog-comp] : < P ; P', fl, S > => < skip, fl, S' >
+		if < P, fl, S > => < skip, fl, S'' > /\
+		   < P', fl, S'' > => < skip, fl, S' > .
+
+	crl [prog-if-true] : < if (b) {P} else {P'}, fl, S > => < P, fl, S >
+		if < b, fl, S > => < true, fl, S > .
+	crl [prog-if-false] : < if (b) {P} else {P'}, fl, S > => < P', fl, S >
+		if < b, fl, S > => < false, fl, S > .
+
+	crl [prog-while-true] : < while (b) {P}, fl, S > => < skip, fl, S' >
+		if < b, fl, S > => < true, fl, S > /\
+		   < P ; while (b) {P}, fl, S > => < skip, fl, S' > .
+	crl [prog-while-false] : < while (b) {P}, fl, S > => < skip, fl, S >
+		if < b, fl, S > => < false, fl, S > .
+
+
+endm
+
+mod IMP-FUNCTIONS-SEMANTICS is
+
+	*** This module gives the rewrite rules for the function calls.
+
+	protecting IMP-BASIC-SEMANTICS .
+
+	var n : Int .
+	var v : Var .
+	var vl : VarList .
+	var a : AritExp .
+	var al : AritExpList .
+	var fl : FuncList .
+	var f : FuncName .
+	vars S S' S'' : Stack .
+	var P : Prog .
+
+	*** Semantics of the return operation.
+	crl [return] : < return a, fl, S > => < skip, fl, S[ 'return / n] > 
+		if < a, fl, S > => n .
+
+	*** Semantics of function calls.
+	crl [func-call] : < f (al), fl function f (vl) {P}, S > => S'[ 'return ] 
+		if giveStack [ vl al ; (fl function f (vl) {P}) S ] => S'' /\ 
+		< P, fl function f (vl) {P}, S'' > => < skip, fl function f (vl) {P}, S' > .
+
+	*** Rewrite rule for giveStack when the argument is an arithmetic expression.
+	crl [givestack] : giveStack [ (v, vl) (a, al) ; fl S ] => < v, n > giveStack [ vl al ; fl S ] 
+		if < a, fl, S > => n .
+
+endm
+
+

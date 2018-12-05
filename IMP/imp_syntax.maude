@@ -1,0 +1,159 @@
+fmod IMP-SORTS is
+	
+	*** This module specifies the sorts of the language.
+
+	protecting QID .
+	protecting INT .
+
+	sort Var .
+	subsort Qid < Var .
+
+	sort AritExp . 
+	subsort Var < AritExp .
+	subsort Int < AritExp .
+
+	sort BoolExp .
+
+	sort Prog .
+
+endfm
+
+fmod IMP-STACK is 
+
+	*** This module specifies the stack for the language: a list of variable-value
+	*** pairs.
+
+	protecting IMP-SORTS .
+
+	vars n n' : Int .
+	vars v v' : Var .
+	var S : Stack .
+
+	sort StackCell Stack .
+	subsort StackCell < Stack .
+
+	op <_,_> : Var Int -> StackCell [ctor] .
+
+	op NoStack : -> Stack [ctor] .
+	op __ : Stack Stack -> Stack [ctor comm assoc id: NoStack] .
+
+	*** Add elements to the stack or change them.
+	op _[_/_] : Stack Var Int -> Stack .
+	eq (S < v, n >) [v / n'] = S < v, n' > .
+	eq S [v / n] = S < v, n > [owise] .
+
+	*** Access a value in the stack.
+	op _[_] : Stack Var ~> Int .
+	eq (S < v, n >) [v] = n .
+
+endfm
+
+
+fmod IMP-BASIC-SYNTAX is
+
+	*** This module specifies the basic syntax of the language: how to build arithmetic 
+	*** and boolean expressions, and how to build statements.
+
+	protecting IMP-STACK .
+
+	*** Syntax of arithmetic expressions.
+	op _+_ : AritExp AritExp -> AritExp [ditto] .
+	op _*_ : AritExp AritExp -> AritExp [ditto] .
+	op _-_ : AritExp AritExp -> AritExp [ditto] .
+
+	*** Syntax of boolean expressions.
+	ops true false : -> BoolExp [ctor] .
+	op _==_ : AritExp AritExp -> BoolExp [ctor] .
+	op _!=_ : AritExp AritExp -> BoolExp [ctor] .
+	op _leq_ : AritExp AritExp -> BoolExp [ctor].
+	op _geq_ : AritExp AritExp -> BoolExp [ctor] .
+	op _and_ : BoolExp BoolExp -> BoolExp [ctor] .
+	op _or_ : BoolExp BoolExp -> BoolExp [ctor] .
+	op not_ : BoolExp -> BoolExp .
+
+	*** Syntax of statements.
+	op skip : -> Prog [ctor] .
+	op _=_ : Var AritExp -> Prog [ctor prec 31] .
+	op _;_ : Prog Prog -> Prog [ctor assoc] .
+	op if (_) {_} else {_} : BoolExp Prog Prog -> Prog [ctor] .
+	op while (_) {_} : BoolExp Prog -> Prog [ctor] .
+
+endfm
+
+fmod IMP-FUNCTIONS-SYNTAX is 
+
+	*** This module specifies the syntax of function calls.
+
+	protecting IMP-BASIC-SYNTAX .
+
+	*** Define a list of variables, which will be used in the declaration of a function.
+	sort VarList  .
+	subsort Var < VarList .
+	op void : -> VarList [ctor] .
+	op _,_ : VarList VarList -> VarList [ctor assoc id: void] .
+
+	*** Define a list of what can be passed when calling a function: a list of 	
+	*** arithmetic expressions.
+	sort AritExpList .
+	subsort AritExp < AritExpList .
+	subsort VarList < AritExpList .
+	op _,_ : AritExpList AritExpList -> AritExpList [ctor assoc id: void] .
+	
+	*** Define the Func sort.
+	sorts Func FuncName .
+	subsort Qid < FuncName .
+
+	*** Syntax for declaring a function.
+	op function _ (_) {_} : FuncName VarList Prog -> Func [ctor] .
+	
+	*** Syntax for calling a function.
+	op _(_) : FuncName AritExpList -> AritExp [ctor] .
+
+	*** Inside a function, specify which value it has to return.
+	op return _ : AritExp -> Prog [ctor] .
+
+endfm
+
+fmod IMP-SCRIPT is
+
+	*** This module specifies how to write a script: a main set of statements followed by 
+	*** possibly a list of functions.
+
+	protecting IMP-FUNCTIONS-SYNTAX .
+
+	*** Define a list of functions.
+	sort FuncList .
+	subsort Func < FuncList .
+	op NoFunc : -> FuncList [ctor] .
+	op __ : FuncList FuncList -> FuncList [ctor assoc comm id: NoFunc] .
+
+	*** Define the Script sort.
+	sort Script .
+	op main{_} : Prog -> Script [ctor] .
+	op main{_}_ : Prog FuncList -> Script [ctor] .
+
+endfm
+
+fmod IMP-GIVESTACK is 
+
+	*** This module gives the definition of the giveStack operator, which will 
+	*** give each function call its own stack.
+
+	protecting IMP-SCRIPT .
+
+	var n : Int .
+	var v : Var .
+	var vl : VarList .
+	var al : AritExpList .
+	var S : Stack .
+	var fl : FuncList .
+
+	op giveStack [__;__] : VarList AritExpList FuncList Stack -> Stack [ctor] .
+
+	*** When there's no input left, return the empty stack.
+	eq giveStack [ void void ; fl S ] = NoStack .
+
+endfm
+
+
+	

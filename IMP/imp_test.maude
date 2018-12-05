@@ -1,0 +1,66 @@
+load imp_semantics.maude .
+
+*** This file contains some tests for functionality of the language.
+
+*** Multiply two numbers.
+rew exec ( main 
+	{  
+		'a = 2 ; 
+		'b = 10 * 'a 
+	} ) .
+
+*** Multiply two numbers calling a function.
+rew exec ( main 
+	{
+		'a = 3 ; 
+		'b = 1 ; 
+		'c = ( 'product ('a, ( 2 * 'b ) ) ) 
+	}
+	function 'product ('x, 'y) 
+	{
+		return ( 'x * 'y ) 
+	} ) .
+
+*** When a function needs no arguments, void is passed.
+rew exec ( main 
+	{ 
+		'c = ( 'number ( void ) )  
+	}  
+	function 'number ( void )  
+	{ 
+		return ( 3 * 2 ) 
+	} ) .
+
+*** Test recursion with the factorial function.
+rew exec ( main 
+	{   
+		'a = 5 ; 
+		'f = ( 'factorial ( 'a ) ) 
+	} 
+ 	function 'factorial ( 'x ) 
+	{  
+		if ( 'x == 1 ) 
+		{ 
+			return 1 
+		} else { 
+			return ('x * ( 'factorial ( 'x - 1 ) ) ) 
+		} 
+	} ) .
+
+*** Test nested functions.
+rew exec ( main 
+	{ 
+		'a = 5 ; 
+		'b = 3 ;
+		'f = ( 'multiply ( 'a, 'b ) ) 
+	} 
+	function 'multiply ('x, 'y) 
+	{
+		return ( 'x * ( 'square('y) ) ) 
+	} 
+	function 'square ('x) 
+	{
+		return ('x * 'x) 
+	} ) . 
+
+
