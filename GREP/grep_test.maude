@@ -1,27 +1,27 @@
 load grep_rewrite.maude .
 
-*** List of legal commands for the GREP language and the result that should appear
-*** on screen when ran
+*** List of commands to be executed with the GREP tool, and the results 
+*** that should appear on the screen.
 
-rew < is { "ho" } in { "h" r. "o" } , askfor > .
+rew is "ho" in "h" . "o" .
   *** true
-rew < is { "hohoho" } in { ( "h" r. "o" ) r* } , askfor > .
+rew is "hohoho" in ( "h" . "o" ) * .
   *** true
-rew < is { "hello" } in { "hello" } , askfor > .
+rew is "hello" in "hello" .
   *** true
-rew < is { "ho" } in { ( "h" r. "o" ) r* } , askfor > .
+rew is "ho" in ( "h" . "o" ) * .
   *** true
-rew < is { "hola" } in { "h" r. "o" r. "l" r. "a" } , askfor > .
+rew is "hola" in "h" . "o" . "l" . "a" .
   *** true
-rew < is { "holahola" } in { "h" r. "o" r. "l" r. "a" } , askfor > .
+rew is "holahola" in "h" . "o" . "l" . "a" .
   *** false
-rew < is { "holahola" } in { ( "h" r. "o" r. "l" r. "a" ) r* } , askfor > .
+rew is "holahola" in ("h" . "o" . "l" . "a") * .
   *** true
-rew < is { "" } in { ( "h" r. "o" r. "l" r. "a" ) r* } , askfor > .
+rew is "" in ( "h" . "o" . "l" . "a" ) * .
   *** true
-rew < is { "hooo" } in { "h" r. "o" r* r+ "i" } , askfor > .
+rew is "hooo" in "h" . "o" * s "i" .
   *** true
-rew < is { "i" } in { "h" r. "o" r* r+ "i" } , askfor > .
+rew is "i" in "h" . "o" * s "i" .
   *** true
-rew < is { "hoho" } in { "h" r. "o" r* r+ "i" } , askfor > .
+rew is "hoho" in "h" . "o" * s "i" .
   *** false
