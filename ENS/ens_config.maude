@@ -1,152 +1,167 @@
-fmod ENS-UTILS is
+fmod ENS-BANK is
+
+	*** This module defines the bank, which is a set of registers that 
+	*** can store values.
 
 	protecting INT .
-	
-	*** Define the REGISTER BANK. A register is a pair of a register name and a value, stored
-	*** in that register, which is an integer number
-	sorts Bank Register RegName .
-	subsort Register < Bank .
-	ops R0 R1 R2 R3 R4 R5 R6 R7 : -> RegName [ctor] .
-	op <_,_> : RegName Int -> Register [ctor] .
 
-	*** Empty bank is a bank. We define an operator, BankInit, in which all registers are set
-	*** to zero. This will serve to initialise any program. The value stored in R0 
-	*** must always be zero
-	op BankEmpty : -> Bank [ctor] .
-	op __ : Bank Bank -> Bank [ctor assoc id: BankEmpty] .
-	op BankInit : -> Bank [ctor] .
-	eq BankInit = < R0, 0 > < R1, 0 > < R2, 0 > < R3, 0 > 
-	                < R4, 0 > < R5, 0 > < R6, 0 > < R7, 0 > .
-	
-
-	*** Define functions to change the content of a register. No new registers can 
-	*** be added
 	var R : RegName .
 	vars n n' : Int .
 	vars b b' : Bank .
-	op _[_/_] : Bank RegName Int -> Bank .
-	eq ( b < R , n > b' ) [R / n'] = b < R , n' > b' .
+
+	*** Define a register: a pair of a register name and a value stored in it.
+	*** The only values allowed are integers.
+	sorts Reg RegName .
+	ops R0 R1 R2 R3 R4 R5 R6 R7 : -> RegName [ctor] .
+	op <_,_> : RegName Int -> Reg [ctor] .
+
+	*** Define a Bank type, which is the set of all eight registers.
+	sort Bank .
+	subsort Reg < Bank .
+	op NoBank : -> Bank [ctor] .
+	op __ : Bank Bank -> Bank [ctor assoc id: NoBank] .
+
+	*** InitBank is the default bank: all values are zero. Serves the purpose of 
+	*** initializing all the programs.
+	op InitBank : -> Bank [ctor] .
+	eq InitBank = < R0, 0 > < R1, 0 > < R2, 0 > < R3, 0 > 
+		< R4, 0 > < R5, 0 > < R6, 0 > < R7, 0 > .
+	
+	*** Define functions to change the content of a register. 
+	*** No new registers can be added.
+	op _[_/_] : Bank RegName Int -> Bank [ctor] .
+	eq (b < R , n > b') [R / n'] = b < R , n' > b' .
 
 	*** Access the value stored in a register
-	op _[_] : Bank RegName -> Int [prec 31] .
-	eq ( b < R , n > b' ) [R] = n .
-	
+	op _[_] : Bank RegName -> Int [ctor] .
+	eq (b < R , n > b') [R] = n .
 
+endfm
 
-        
-        *** Define the MEMORY, which is a set of pairs of an adress (a natural number) 
-        *** and some content, an integer number
-	sorts Memory MemLoc .
+fmod ENS-MEMORY is
+
+	*** This module defines the RAM memory that ENS can use.
+
+	protecting ENS-BANK .
+
+	vars M M' : Mem .
+	var a : Nat .
+	vars n n' : Int .
+
+	*** Define the Mem type, which has pairs of addresses and values stored at
+	*** those addresses.
+	sorts Mem MemLoc .
+	subsort MemLoc < Mem .
 	op <_,_> : Nat Int -> MemLoc [ctor] .
-	
-	*** Empty memory serves as an identity element and as initialization
-	op MemEmpty : -> Memory [ctor] .
+	op NoMem : -> Mem [ctor] .
+	op __ : Mem Mem -> Mem [ctor assoc comm id: NoMem] .
 
-	*** Elements in memory are back to back
-	subsort MemLoc < Memory .
-	op __ : Memory Memory -> Memory [ctor comm assoc id: MemEmpty] .
+	*** Define a function that adds elements to memory or modifies 
+	*** elements in memory.
+	op _[_/_] : Mem Nat Int -> Mem [ctor] .
+	eq (M < a, n >) [a / n'] = M < a, n' > .
+	eq M [a / n] = M < a, n > [owise] .
 
-	var M : Memory .
+	*** Access contents in memory by giving the address.
+	op _[_] : Mem Nat ~> Int [ctor] .
+	eq (M < a, n >) [a] = n .
+
+endfm
+
+fmod ENS-STATE is
+
+	*** This module gives various tools for the language.
+
+	protecting ENS-BANK .
+	protecting ENS-MEMORY .
+
+	var n : Int .
 	var d : Nat .
-	vars f f' : Int .
-	
-	*** Function to add elements in memory or to modify those that already exist
-	op _[_/_] : Memory Nat Int -> Memory [ctor] .
-	eq ( M < d, f > ) [d / f'] = M < d, f' > .
-	eq M [d / f] = M < d, f > [owise] .
+	var b : Bank .
+	var nr : NegReg .
+	var zr : ZeroReg .
+	var cr : CountReg .
+	var M : Mem .
 
-	*** Access the content of a memory location
-	op _[_] : Memory Nat ~> Int [prec 31] .
-	eq (M < d , f >) [d] = f .
+	*** Define the three special registers.
+	*** The negative indicator will know if a number is negative.
+	sort NegReg .
+	op < N, _> : Nat -> NegReg [ctor] .
+	*** The zero indicator will know if a number is zero.
+	sort ZeroReg .
+	op < Z, _> : Nat -> ZeroReg [ctor] .
+	*** The program counter is a register that knows what to execute next.
+	sort CountReg .
+	op < PC, _> : Nat -> CountReg [ctor] .
 
-
-
-	
-	*** Two more registers. One is the negative indicator, and keeps one if the number is
-	*** negative, zero if not. The other is the zero indicator, keeps a one if the 
-	*** number is xero, keeps a zero if the number is not zero
+	*** Define operators to work with negative and zero registers.
 	op isneg_ : Int -> Nat [ctor] .
 	ceq isneg n = 1 if n < 0 .
 	ceq isneg n = 0 if n >= 0 .
-
 	op iszero_ : Int -> Nat [ctor] .
 	ceq iszero n = 1 if n = 0 .
 	ceq iszero n = 0 if n =/= 0 . 
-
-	
-
         
-        *** The program counter is another register that will keep a number which is the 
-        *** adress in memory where the next instruction has to be fetched. 
-        *** Execution begins with this register set to zero
-        *** sort PC .
-        *** subsort Nat < PC .
-
-
-        
-        *** Define a State as a set of the eight registers, a Memory, indicators of zero and
-        *** negative, and a program counter, PC
+        *** Define a State as a set of the eight main registers, the three special registers
+	*** and a memory.
 	sort State .
-	op [_;_;_;_;_] : Bank Memory Nat Nat Nat -> State [ctor] .
+	op [_;_;_;_;_] : Bank NegReg ZeroReg CountReg Mem -> State [ctor] .
 	
-	*** Initial state to simplify execution
-	op StateInit : -> State [ctor] .
-	eq StateInit = [ BankInit ; MemEmpty ; 0 ; 0 ; 0 ] .
+	*** Define an initial state to simplify execution.
+	op InitState : -> State [ctor] .
+	eq InitState = [ InitBank ; < N, 0 > ; < Z, 0 > ; < PC, 0 > ; NoMem ] .
 
-
-
-        
-        *** Operators to access the various elements of a State
-	*** Access the three registers
-	vars x y C : Nat .
-
-	op indn_ : State -> Nat .
-	eq indn [ b ; M ; x ; y ; C ]  = x .
-
-	op indz_ : State -> Nat .
-	eq indz [ b ; M ; x ; y ; C ]  = y .
-
+	*** Define operators to look for information inside a State type.
+	*** Acces the value in the three special registers.
+	op neg_ : State -> Nat .
+	eq neg [ b ; < N, d > ; zr ; cr ; M ] = d .
+	op zero_ : State -> Nat .
+	eq zero [ b ; nr ; < Z, d > ; cr ; M ]  = d .
 	op count_ : State -> Nat .
-	eq count [ b ; M ; x ; y ; C ]  = C .
+	eq count [ b ; nr ; zr ; < PC, d > ; M ]  = d .
 	
-	
-	*** Access the Register bank and the Memory of a State
+	*** Access the register bank and the memory of a state.
 	op bank_ : State -> Bank [ctor] .
-	eq bank [ b ; M ; x ; y ; C ]  = b .
+	eq bank [ b ; nr ; zr ; cr ; M ]  = b .
 	
-	op memory_ : State -> Memory [ctor] .
-	eq memory [ b ; M ; x ; y ; C ]  = M .
+	op memory_ : State -> Mem [ctor] .
+	eq memory [ b ; nr ; zr ; cr ; M ]  = M .
 	
 endfm
 
 fmod ENS-SYNTAX is
 
-	protecting ENS-UTILS .
+	*** This module defines the basic syntax of the language.
+
+	protecting ENS-STATE .
         
         *** Define the legal instructions in ENS. A statement Stm is a pair of a number, which is 
         *** the adress of the instruction in memory, and then the instruction.
         *** A program is a list of statements, back to back
         
+	*** Define a statement, which is a pair of an instruction, and a number that 
+	*** identifies that instruction.
+	*** Define a Prog, which is a list of statements.
         sort Inst Stm Prog .
 	subsort Stm < Prog .
 	op {_;_} : Nat Inst -> Stm [ctor] .
-	op ProgEmpty : -> Prog [ctor] .
-	op __ : Prog Prog -> Prog [ctor assoc id: ProgEmpty] .
+	op NoStm : -> Stm [ctor] .
+	op __ : Prog Prog -> Prog [ctor assoc id: NoStm] .
 	
 	
-
-	*** Arithmetic instructions	
+	*** Define the arithmetic instructions.
 	op ADD __,_ : RegName RegName RegName -> Inst [ctor] .
 	op SUB __,_ : RegName RegName RegName -> Inst [ctor] .
 	op AND __,_ : RegName RegName RegName -> Inst [ctor] .
 	op ADDI __,_ : RegName Nat RegName -> Inst [ctor] .
 	op SUBI __,_ : RegName Nat RegName -> Inst [ctor] .
 	
-	*** Instructions of information exchange
+	*** Define instructions to exchange information between 
+	*** the register bank and the memory.
 	op LOAD _(_),_ : Nat RegName RegName -> Inst [ctor] .
 	op STORE _,_(_) : RegName Nat RegName -> Inst [ctor] .
 
-	*** Jump instructions
+	*** Define the jump instructions.
 	op BL_ : Nat -> Inst [ctor] .
 	op BG_ : Nat -> Inst [ctor] .
 	op BEQ_ : Nat -> Inst [ctor] .
