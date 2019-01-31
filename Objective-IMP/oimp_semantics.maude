@@ -31,7 +31,7 @@ mod OBJECTIVEIMP-BASIC-SEMANTICS is
 	var z : Var .
 	vars A B : AritExp .
 	vars P P' : Prog .
-	var fb : FuncBlock .
+	vars fb fb' fb'' : FuncBlock .
 	var cl : ClassList .
 
 	*** Evaluation of a number.
@@ -63,6 +63,15 @@ mod OBJECTIVEIMP-BASIC-SEMANTICS is
 		if < A == B, fb, cl, M > => < false, fb, cl, M > .
 	crl [bool-diff-false] : < A != B, fb, cl, M > => < false, fb, cl, M > 
 		if < A == B, fb, cl, M > => < true, fb, cl, M > .
+
+	crl [l-true] : < A l B, fb, cl, M > => < true, fb, cl, M >
+		if < A, fb, cl, M > => m  /\  < B, fb, cl, M > => n /\ m < n .
+	crl [l-false] : < A l B, fb, cl, M > => < false, fb, cl, M >
+		if < A, fb, cl, M > => m /\ < B, fb, cl, M > => n /\ m >= n .
+	crl [g-true] : < A g B, fb, cl, M > => < true, fb, cl, M >
+		if < A, fb, cl, M > => m /\ < B, fb, cl, M > => n /\ m > n .
+	crl [g-false] : < A g B, fb, cl, M > => < false, fb, cl, M >
+		if < A, fb, cl, M > => m /\ < B, fb, cl, M > => n /\ m <= n .
 
 	crl [leq-true] : < A leq B, fb, cl, M > => < true, fb, cl, M >
 		if < A, fb, cl, M > => m  /\  < B, fb, cl, M > => n /\ m <= n .
@@ -101,9 +110,9 @@ mod OBJECTIVEIMP-BASIC-SEMANTICS is
 	crl [prog-assign] : < z = A, fb, cl, M > => < skip, fb, cl, M[z / n] >
 		if < A, fb, cl, M > => n .
 
-	crl [prog-comp] : < P ; P', fb, cl, M > => < skip, fb, cl, M' >
-		if < P, fb, cl, M > => < skip, fb, cl, M'' > /\
-		< P', fb, cl, M'' > => < skip, fb, cl, M' > .
+	crl [prog-comp] : < P ; P', fb, cl, M > => < skip, fb'', cl, M'' >
+		if < P, fb, cl, M > => < skip, fb', cl, M' > /\
+		< P', fb', cl, M' > => < skip, fb'', cl, M'' > .
 
 	crl [prog-if-true] : < if (b) {P} else {P'}, fb, cl, M > => < P, fb, cl, M >
 		if < b, fb, cl, M > => < true, fb, cl, M > .
@@ -133,10 +142,9 @@ mod OBJECTIVEIMP-FUNCTIONS-SEMANTICS is
 	var oi : ObjectId .
 	var o : Object .
 	var c : ClassName .
-	var f : FuncName .
+	var f : NumFunc .
 	var i : Input .
 	var il : InputList .
-	***var ar : Arg .
 	vars arl arl' : ArgList .
 	var a : AritExp .
 	vars fb fb' fb'' : FuncBlock .
@@ -161,9 +169,9 @@ mod OBJECTIVEIMP-FUNCTIONS-SEMANTICS is
 		preExec [ il ; arl ; None ; NoTrack ; fb ([main] (fl function f (il) {P})), cl, M / P, ([main] (fl function f (il) {P})), NoClass, NoMemory ] => 
 		preExec [ void ; void ; None ; ot ; fb ([main] (fl function f (il) {P})), cl, M / P', fb', cl', M' ] /\ 
 		< P', fb', cl', M' > => < skip, fb'', cl'', M'' > /\ 
-		postExec [ ot, None ; M / M'' ] => M''' .
+		postExec [ ot, None ; M / M'' ] => postExec [ NoTrack, None ; M / M''' ] .
 
-	*** Evaluate the arguments inside the preExec operator.
+	*** Evaluate the arithmetic expressions inside the preExec operator.
 	crl preExec [ (v, il) ; (a, arl) ; oi ; ot ; fb, cl, M / P', fb', cl', M' ] => 
 		preExec [ (v, il) ; (n, arl) ; oi ; ot ; fb, cl, M / P', fb', cl', M' ] 
 		if < a, fb, cl, M > => n .
@@ -182,38 +190,37 @@ mod OBJECTIVEIMP-OBJECTS-SEMANTICS is
 	var c : ClassName .
 	var il : InputList .
 	var arl : ArgList .
-	var f : FuncName .
+	var f : NumFunc .
 	vars M M' M'' M''' : Memory .
 	vars P P' : Prog .
 	vars S S' : Stack .
-	vars fb fb' fb'' : FuncBlock .
+	vars fb fb' fb'' : FuncBlock .	
 	vars cl cl' cl'' : ClassList .
 	vars fl fl' : FuncList .
 	var ot : ObjTrackList .
 
 	*** Declare a new object.
 	crl [newobject] : < o = new c (arl), fb ([main] fl), cl class c { constructor (il) {P} fl'}, M > => 
-		< skip, fb ([main] fl) ([ o ] fl'), cl class c { constructor(il) {P} fl'}, M ([ o ] S) > if 
+		< skip, fb ([main] fl) ([ o ] (fl')), cl class c { constructor(il) {P} fl'}, M ([ o ] S) > if 
 		preExec [ il ; arl ; None ; NoTrack ; fb ([main] fl), cl class c { constructor(il) {P} }, M / P, ([main] fl), NoClass, ([ this ] NoStack) ] => 
 		preExec [ void ; void ; None ; ot ; fb ([main] fl), cl class c { constructor(il) {P} }, M / P', fb', cl', M' ] /\ 
 		< P', fb', cl', M' > => < skip, fb'', cl'', M'' ([ this ] S) > .
 
 	*** Rewrite the "arithmetic" kind of function belonging to an object. This only returns a value.
 	*** Pass main functions on the fly.
-	crl [objfunc-arit] : < ( o . f ) (arl), (fb ([ o ] (fl function f (il) {P})) ([main] fl)), cl, M > => M''[ 'return ] if 
-		preExec [ il ; arl ; [ o ] ; NoTrack ; (fb ([ o ] (fl function f (il) {P})) ([main] fl)), cl, M /  P, ([main] fl), NoClass, NoMemory ] => 
-		preExec [ void ; void ; None ; ot ; (fb ([ o ] (fl function f (il) {P})) ([main] fl)), cl, M /  P', fb', cl', M' ] /\ 
+	crl [objfunc-arit] : < o . (f (arl)), (fb ([ o ] (fl function f (il) {P})) ([main] fl')), cl, M > => M''[ 'return ] if 
+		preExec [ il ; arl ; [ o ] ; NoTrack ; (fb ([ o ] (fl function f (il) {P})) ([main] fl')), cl, M /  P, ([main] fl'), NoClass, NoMemory ] => 
+		preExec [ void ; void ; None ; ot ; (fb ([ o ] (fl function f (il) {P})) ([main] fl')), cl, M /  P', fb', cl', M' ] /\ 
 		< P', fb', cl', M' > => < skip, fb'', cl'', M'' > .
 
 	*** Rewrite the "run" kind of function, when it belongs to an object.
 	*** Pass the main functions on the fly.
-	crl [objfunc-run] : < run ( o . f ) (arl), (fb ([ o ] (fl function f (il) {P})) ([main] fl)), cl, M > => 
-		< skip, (fb ([ o ] (fl function f (il) {P})) ([main] fl)), cl, M''' > if 
-		preExec [ il ; arl ; [ o ] ; NoTrack ; (fb ([ o ] (fl function f (il) {P})) ([main] fl)), cl, M / P, ([main] fl), NoClass, NoMemory ] => 
-		preExec [ void ; void ; None ; ot ; (fb ([ o ] (fl function f (il) {P})) ([main] fl)), cl, M / P', fb', cl', M' ] /\ 
+	crl [objfunc-run] : < run o . (f (arl)), (fb ([ o ] (fl function f (il) {P})) ([main] fl')), cl, M > => 
+		< skip, (fb ([ o ] (fl function f (il) {P})) ([main] fl')), cl, M''' > if 
+		preExec [ il ; arl ; [ o ] ; NoTrack ; (fb ([ o ] (fl function f (il) {P})) ([main] fl')), cl, M / P, ([main] fl'), NoClass, NoMemory ] => 
+		preExec [ void ; void ; None ; ot ; (fb ([ o ] (fl function f (il) {P})) ([main] fl')), cl, M / P', fb', cl', M' ] /\ 
 		< P', fb', cl', M' > => < skip, fb'', cl'', M'' > /\ 
-		postExec [ ot, [ o ] ; M / M'' ] => M''' .
-
+		postExec [ ot, [ o ] ; M'' / M ] => postExec [ NoTrack, None ; M'' / M''' ] .
 endm
 
 

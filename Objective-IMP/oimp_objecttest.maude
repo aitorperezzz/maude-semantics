@@ -1,0 +1,52 @@
+load oimp_semantics.maude .
+
+*** General and mixed testing.
+
+rew exec ( main 
+	{ 
+		'speed = 10 ; 
+		'x0 = 5 ; 
+		'y0 = 5 ; 
+		'b = new 'Ball ( 'x0, 'y0, 10 ) ; 
+		'result = 'b . 'move (20)    
+	}  
+	class 'Ball { 
+		constructor ( 'xpos, 'ypos, 'rad ) { 
+			this . 'xpos = 'xpos ; 
+			this . 'ypos = 'ypos ; 
+			this . 'rad = 'rad   
+		} 
+		function 'move ( 'step ) { 
+			return this . 'xpos + 'step   
+			
+		} 
+	} ) .
+
+rew exec ( main 
+	{ 
+		'initialspeed = 4 ; 
+		'x0 = 5 ; 
+		'y0 = 5 ; 
+		'step = 'multiply ( 'initialspeed, 3) ; 
+		'b = new 'Ball ( 'x0, 'y0, 10 ) ; 
+		run 'b . 'move (20) ; 
+		run 'b . 'upx ( void ) 
+	}  
+	function 'multiply ( 'number, 'times ) {
+		return 'number * 'times  
+	} 
+	class 'Ball { 
+		constructor ( 'xpos, 'ypos, 'rad ) { 
+			this . 'xpos = 'xpos ; 
+			this . 'ypos = 'ypos ; 
+			this . 'rad = 'rad   
+		} 
+		function 'move ( 'step ) { 
+			this . 'xpos = this . 'xpos + 'step  
+		} 
+		function 'upx ( void ) { 
+			this . 'xpos = this . 'xpos + 40  
+		} 
+	} ) .
+
+
