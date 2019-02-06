@@ -20,28 +20,47 @@ mod ENS-SEMANTICS is
 	op exec(_,_) : Prog State -> ProgEval .
 
 	*** Rewrite rules for arithmetic instructions, only registers.
-	crl [add] : exec( P { c ; ADD R R', R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+	*** When the register is not R0, update special registers and change value in register. If the register
+	*** is R0, only update the special registers.
+	crl [add-notR0] : exec( P { c ; ADD R R', R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
 		exec( P { c ; ADD R R', R'' } P' , [ b[R'' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
-		if (b[R] + b[R']) => m .
+		if (b[R] + b[R']) => m /\ R'' =/= R0 .
+	crl [add-R0] : exec( P { c ; ADD R R', R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; ADD R R', R'' } P' , [ b ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
+		if (b[R] + b[R']) => m /\ R'' == R0 .
 
-	crl [sub] : exec( P { c ; SUB R R', R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+	crl [sub-notR0] : exec( P { c ; SUB R R', R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
 		exec( P { c ; SUB R R', R'' } P' , [ b[R'' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
-		if b[R] - b[R'] => m .
+		if b[R] - b[R'] => m /\ R'' =/= R0 .
+	crl [sub-R0] : exec( P { c ; SUB R R', R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; SUB R R', R'' } P' , [ b ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
+		if b[R] - b[R'] => m /\ R'' == R0 .
 
 	*** Rewrite rules for arithmetic instructions, with inmediates.
-	crl [addinmed] : exec( P { c ; ADDI R t, R'' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
+	crl [addinmed-notR0] : exec( P { c ; ADDI R t, R'' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
 		exec( P { c ; ADDI R t, R'' } P' , [ b[R'' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
-		if b[R] + t => m .
+		if b[R] + t => m /\ R'' =/= R0 .
+	crl [addinmed-R0] : exec( P { c ; ADDI R t, R'' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
+		exec( P { c ; ADDI R t, R'' } P' , [ b ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
+		if b[R] + t => m /\ R'' == R0 .
 
-	crl [subinmed] : exec( P { c ; SUBI R t, R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+	crl [subinmed-notR0] : exec( P { c ; SUBI R t, R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
 		exec( P { c ; SUBI R t, R'' } P' , [ b[R'' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
-		if b[R] - t => m .
+		if b[R] - t => m /\ R'' =/= R0 .
+	crl [subinmed-R0] : exec( P { c ; SUBI R t, R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; SUBI R t, R'' } P' , [ b ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
+		if b[R] - t => m /\ R'' == R0 .
         
         
-        *** Rewrite rules for information exchange instructions
-	crl [load] : exec( P { c ; LOAD q (R), R' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
+        *** Rewrite rules for information exchange instructions.
+	*** For the LOAD operation, if the destination register is R0, only update
+	*** the special registers.
+	crl [load-notR0] : exec( P { c ; LOAD q (R), R' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
 		exec(P { c ; LOAD q (R), R' } P' , [ b[R' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ]) 
-		if M[ q + b[R]] => m .
+		if M[ q + b[R]] => m /\ R' =/= R0 .
+	crl [load-R0] : exec( P { c ; LOAD q (R), R' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
+		exec(P { c ; LOAD q (R), R' } P' , [ b ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ]) 
+		if M[ q + b[R]] => m /\ R' == R0 .
 	rl [store] : exec( P { c ; STORE R, q (R') } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
 		exec( P { c ; STORE R, q (R') } P' , [ b ; nr ; zr ; < PC, s(c) > ; M[(q + b[R']) / b[R]] ] ) .
 
