@@ -24,8 +24,7 @@ fmod ENS-BANK is
 	*** InitBank is the default bank: all values are zero. Serves the purpose of 
 	*** initializing all the programs.
 	op InitBank : -> Bank [ctor] .
-	eq InitBank = < R0, 0 > < R1, 0 > < R2, 0 > < R3, 0 > 
-		< R4, 0 > < R5, 0 > < R6, 0 > < R7, 0 > .
+	eq InitBank = < R0, 0 > < R1, 0 > < R2, 0 > < R3, 0 > < R4, 0 > < R5, 0 > < R6, 0 > < R7, 0 > .
 	
 	*** Define functions to change the content of a register. 
 	*** No new registers can be added.
@@ -33,7 +32,7 @@ fmod ENS-BANK is
 	eq (b < R , n > b') [R / n'] = b < R , n' > b' .
 
 	*** Access the value stored in a register
-	op _[_] : Bank RegName -> Int [ctor] .
+	op _[_] : Bank RegName -> Int [ctor prec 30] .
 	eq (b < R , n > b') [R] = n .
 
 endfm
@@ -63,7 +62,7 @@ fmod ENS-MEMORY is
 	eq M [a / n] = M < a, n > [owise] .
 
 	*** Access contents in memory by giving the address.
-	op _[_] : Mem Nat ~> Int [ctor] .
+	op _[_] : Mem Nat ~> Int [ctor prec 30] .
 	eq (M < a, n >) [a] = n .
 
 endfm
@@ -72,7 +71,6 @@ fmod ENS-STATE is
 
 	*** This module gives various tools for the language.
 
-	protecting ENS-BANK .
 	protecting ENS-MEMORY .
 
 	var n : Int .
@@ -142,11 +140,11 @@ fmod ENS-SYNTAX is
 	*** Define a statement, which is a pair of an instruction, and a number that 
 	*** identifies that instruction.
 	*** Define a Prog, which is a list of statements.
-        sort Inst Stm Prog .
-	subsort Stm < Prog .
-	op {_;_} : Nat Inst -> Stm [ctor] .
-	op NoStm : -> Stm [ctor] .
-	op __ : Prog Prog -> Prog [ctor assoc id: NoStm] .
+        sort Inst Prog .
+	***subsort Stm < Prog .
+	op {_;_} : Nat Inst -> Prog [ctor] .
+	op NoProg : -> Prog [ctor] .
+	op __ : Prog Prog -> Prog [ctor assoc id: NoProg] .
 	
 	
 	*** Define the arithmetic instructions.

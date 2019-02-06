@@ -3,95 +3,89 @@ load ens_config.maude .
 mod ENS-SEMANTICS is
 
 	protecting ENS-SYNTAX .
-	protecting ENS-UTILS .
-	
-	vars M M' : Memory .
-	vars R R' R'' : RegName .
+
 	var b : Bank .
-	vars x x' y y' C n : Nat .
+	var nr : NegReg .
+	var zr : ZeroReg .
+	var cr : CountReg .
+	vars M M' : Mem .
+	vars R R' R'' : RegName .
+	vars q n z c c' : Nat .
+	var t : Int .
 	vars P P' : Prog .
+	var m : Int .
 
 	*** Define the evaluation of a program in a certain State
 	sort ProgEval .
 	op exec(_,_) : Prog State -> ProgEval .
-	
 
+	*** Rewrite rules for arithmetic instructions, only registers.
+	crl [add] : exec( P { c ; ADD R R', R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; ADD R R', R'' } P' , [ b[R'' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
+		if (b[R] + b[R']) => m .
 
-	*** Rewrite rules for arithmetic instructions
+	crl [sub] : exec( P { c ; SUB R R', R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; SUB R R', R'' } P' , [ b[R'' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
+		if b[R] - b[R'] => m .
 
-	rl [add] : exec( P { C ; ADD R R', R'' } P' , [ b ; M ; x ; y ; C ] ) => 
-                exec( P { C ; ADD R R', R'' } P' , [ b[R'' / ( b[R] + b[R'] )] ; M ; 
-                isneg ( b[R] + b[R'] ) ; iszero ( b[R] + b[R'] ) ; s(C) ] ) .
+	*** Rewrite rules for arithmetic instructions, with inmediates.
+	crl [addinmed] : exec( P { c ; ADDI R t, R'' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
+		exec( P { c ; ADDI R t, R'' } P' , [ b[R'' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
+		if b[R] + t => m .
 
-	rl [sub] : exec( P { C ; SUB R R', R'' } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; SUB R R', R'' } P' , [ b[R'' / ( b[R] - b[R'] )] ; M ; 
-		 isneg ( b[R] - b[R'] ) ; iszero ( b[R] - b[R'] ) ; s(C) ] ) .
-
-	rl [addinmed] : exec( P { C ; ADDI R n, R'' } P' , [ b ; M ; x ; y ; C ] ) => 
-	        exec( P { C ; ADDI R n, R'' } P' , [ b[R'' / ( b[R] + n )] ; M ; 
-	        isneg ( b[R] + n ) ; iszero ( b[R] + n ) ; s(C) ] ) .
-	rl [subinmed] : exec( P { C ; SUBI R n, R'' } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; SUBI R n, R'' } P' , [ b[R'' / ( b[R] - n )] ; M ; 
-		 isneg ( b[R] - n ) ; iszero ( b[R] - n ) ; s(C) ] ) .
-
+	crl [subinmed] : exec( P { c ; SUBI R t, R'' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; SUBI R t, R'' } P' , [ b[R'' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ] ) 
+		if b[R] - t => m .
         
         
         *** Rewrite rules for information exchange instructions
-	rl [load] : exec( P { C ; LOAD n (R), R' } P' , [ b ; M ; x ; y ; C ] ) => 
-	        exec( P { C ; LOAD n (R), R' } P' , [ b[R' /  M[ n + b[R] ] ] ; M ; 
-	        isneg ( M[ n + b[R] ] ) ; iszero ( M[ n + b[R] ] ) ; s(C) ] ) .
-	rl [store] : exec( P { C ; STORE R, n (R') } P' , [ b ; M ; x ; y ; C ] ) => 
-	        exec( P { C ; STORE R, n (R') } P' , [ b ; M[(n + b[R']) / b[R] ] ; 
-	        x ; y ; s(C) ] ) .
-
+	crl [load] : exec( P { c ; LOAD q (R), R' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
+		exec(P { c ; LOAD q (R), R' } P' , [ b[R' / m] ; < N, isneg m > ; < Z, iszero m > ; < PC, s(c) > ; M ]) 
+		if M[ q + b[R]] => m .
+	rl [store] : exec( P { c ; STORE R, q (R') } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
+		exec( P { c ; STORE R, q (R') } P' , [ b ; nr ; zr ; < PC, s(c) > ; M[(q + b[R']) / b[R]] ] ) .
 
 
 	*** Rewrite rules for jump instructions
-	crl [jumpiflesstrue] : exec( P { C ; BL n } P' , [ b ; M ; x ; y ; C ] ) => 
-	        exec( P { C ; BL n } P' , [ b ; M ; x ; y ; n ] ) 
-	        if x == 1 .
-	crl [jumpiflessfalse] : exec( P { C ; BL n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BL n } P' , [ b ; M ; x ; y ; s(C) ] ) 
-		if x =/= 1  .
 
-	crl [jumpifgreatertrue] : exec( P { C ; BG n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BG n } P' , [ b ; M ; x ; y ; n ] ) 
-		if x == 0 and y == 0 .
-	crl [jumpifgreaterfalse] : exec( P { C ; BG n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BG n } P' , [ b ; M ; x ; y ; s(C) ] ) 
-		if not( x == 0 and y == 0 ) .
+	*** Jump if the number was strictly less than zero.
+	crl [jump-less-true] : exec( P { c ; BL c' } P' , [ b ; < N, n > ; zr ; < PC, c > ; M ] ) => 
+		exec( P { c ; BL n } P' , [ b ; < N, n > ; zr ; < PC, c' > ; M ] ) if n == 1 .
+	crl [jump-less-false] : exec( P { c ; BL c' } P' , [ b ; < N, n > ; zr ; < PC, c > ; M ] ) => 
+		exec( P { c ; BL n } P' , [ b ; < N, n > ; zr ; < PC, s(c) > ; M ] ) if n == 0 .
 
-	crl [jumpifequaltrue] : exec( P { C ; BEQ n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BEQ n } P' , [ b ; M ; x ; y ; n ] ) 
-		if y == 1 .
-	crl [jumpifequalfalse] : exec( P { C ; BEQ n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BEQ n } P' , [ b ; M ; x ; y ; s(C) ] ) 
-		if y =/= 1 .
+	*** Jump if the number was strictly greater than zero.
+	crl [jump-greater-true] : exec( P { c ; BG c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BG c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c' > ; M ] ) if n == 0 and z == 0 .
+	crl [jump-greater-false] : exec( P { c ; BG c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BG c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, s(c) > ; M ] ) if not(n == 0 and z == 0) .
 
-	crl [jumpifdifftrue] : exec( P { C ; BNE n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BNE n } P' , [ b ; M ; x ; y ; n ] ) 
-		if y == 0 .
-	crl [jumpifdifffalse] : exec( P { C ; BNE n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BNE n } P' , [ b ; M ; x ; y ; s(C) ] ) 
-		if y =/= 0 .
+	*** Jump if the number was zero.
+	crl [jump-equal-tue] : exec( P { c ; BEQ c' } P' , [ b ; nr ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BEQ c' } P' , [ b ; nr ; < Z, z > ; < PC, c' > ; M ] ) if z == 1 .
+	crl [jump-equal-false] : exec( P { c ; BEQ c' } P' , [ b ; nr ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BEQ c' } P' , [ b ; nr ; < Z, z > ; < PC, s(c) > ; M ] ) if z == 0 .
 
-	crl [jumpifleqtrue] : exec( P { C ; BLE n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BLE n } P' , [ b ; M ; x ; y ; n ] ) 
-		if x == 1 or y == 1 .
-	crl [jumpifleqfalse] : exec( P { C ; BLE n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BLE n } P' , [ b ; M ; x ; y ; s(C) ] ) 
-		if not( x == 1 or y == 1 ) .
+	*** Jump if the number was different from zero.
+	crl [jump-diff-true] : exec( P { c ; BNE c' } P' , [ b ; nr ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BNE c' } P' , [ b ; nr ; < Z, z > ; < PC, c' > ; M ] ) if z == 0 .
+	crl [jump-diff-false] : exec( P { c ; BNE c' } P' , [ b ; nr ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BNE c' } P' , [ b ; nr ; < Z, z > ; < PC, s(c) > ; M ] ) if z == 1 .
 
-	crl [jumpifgeqtrue] : exec( P { C ; BGE n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BGE n } P' , [ b ; M ; x ; y ; n ] ) 
-		if x == 0 or y == 1 .
-	crl [jumpifgeqfalse] : exec( P { C ; BGE n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BGE n } P' , [ b ; M ; x ; y ; s(C) ] ) 
-		if not( x == 0 or y == 1 ) .
+	*** Jump if the number was less than or equal to zero.
+	crl [jum-leq-true] : exec( P { c ; BLE c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BLE c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c' > ; M ] ) if n == 1 or z == 1 .
+	crl [jum-leq-false] : exec( P { c ; BLE c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BLE c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, s(c) > ; M ] ) if not(n == 1 or z == 1) .
 
-	rl [jump] : exec( P { C ; BR n } P' , [ b ; M ; x ; y ; C ] ) => 
-		 exec( P { C ; BR n } P' , [ b ; M ; x ; y ; n ] ) .
+	*** Jump if the number was greater than or equal to zero.
+	crl [jump-geq-true] : exec( P { c ; BGE c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BGE n } P' , [ b ; < N, n > ; < Z, z > ; < PC, c' > ; M ] ) if n == 0 or z == 1 .
+	crl [jump-geq-false] : exec( P { c ; BGE c' } P' , [ b ; < N, n > ; < Z, z > ; < PC, c > ; M ] ) => 
+		exec( P { c ; BGE n } P' , [ b ; < N, n > ; < Z, z > ; < PC, s(c) > ; M ] ) if not(n == 0 or z == 1) .
 
+	*** Jump without a condition.
+	rl [jump] : exec( P { c ; BR c' } P' , [ b ; nr ; zr ; < PC, c > ; M ] ) => 
+		 exec( P { c ; BR c' } P' , [ b ; nr ; zr ; < PC, c' > ; M ] ) .
 
-	
 endm
