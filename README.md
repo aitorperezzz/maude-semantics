@@ -24,3 +24,5 @@ IMP is a simple, high level, imperative language.
 
 ### **ObjectiveIMP**
 This language is based off the functionality of IMP and includes the ability to code in an object oriented way. It supports objects, which are variables that contain their own variables and functions (called methods).
+
+The GitHub repository for the Maude programming language can be found at [the Maude repo](https://github.com/maude-team/maude).
