@@ -1,45 +1,26 @@
-# Especificación de semánticas en Maude
-En este repositorio hay carpetas para cada uno de los programas, que se detallan a continuación:
+# Semantics specifications in Maude
+In this project I am using Maude to specify the semantics of several programming languages. Maude is a functional language where the programmer can define the syntax of any language by means of functional modules and equations. Also, the semantics of the languages can be specified thanks to rewrite rules.
+
+### **GREP**
+GREP is a command line tool like grep (UNIX). The user has to give it a regular expression which will specify a language (a certain set of accepted strings). Then, the user can ask if certain word belongs to the language specified by the regular expresion with a syntax that looks like this:
+
+```is <string> in <regular expression>```
+
+### **ENS**
+ENS is a simple assembly language for a specific machine. This machine operates on eight registers and only supports integer numbers. The RAM memory for ENS is a list of address-value pairs. Each value in memory is accessed by means of its address. The flow of the language consists on executing a set of instructions, one after the other, altering the state of the bank of registers and the memory.
+
+* It supports basic arithmetic instructions that allow the machine to sum, subtract or multiply numbers stored in registers.
+* It supports information exchange instructions, which allow the machine to exchange values between the bank of registers and the memory.
+* It supports jump instructions. If certain conditions are met, the predefined flow of the execution can be altered.
 
 ### **IMP**
-Se trata de un lenguaje sencillo de alto nivel. Tiene las siguientes características:
+IMP is a simple, high level, imperative language. 
 
-  * _Variables_: cargando el módulo predeterminado de Maude QID tenemos disponibles los conjuntos de letras 
-para representar variables. Cada variable está asociada a un número; esto se consigue con el módulo de la memoria
-que asocia a cada nombre de una variable un número. Tenemos operaciones para acceder a los elementos de la memoria
-y para añadir nuevos elementos.  
-  * _Números naturales_: como un paquete predeterminado de Maude. No hay números reales.  
-  * _Expresiones aritméticas_: Los casos base son los números y las variables. Existe una función que a cada variable
-le puede extraer el número que representa en la memoria. Además, podemos construir nuevas expresiones aritméticas con
-los símbolos para la suma y el producto.  No hay más operaciones porque solo disponemos de los números naturales.  
-  * _Expresiones Booleanas_: dos valores true y false, y expresiones para el AND lógico, el OR lógico y el NOT
-lógico. También podemos comparar expresiones aritméticas para obtener valores Booleanos. En concreto, podemos
-comparar expresiones con un símbolo para el menor o igual, y con otro para la igualdad.  
+* Variables and integer numbers are the basic elements of the language.
+* The programmer can create complex arithmetic expressions using numbers, variables, and the +, - and * operators.
+* It supports _true_ and _false_ truth values, as well as the operations and, or, not, greater than, equal to, etc.
+* It supports instructions like if-else or while.
+* The most important feature are the functions: implement a function and call it inside the program or inside other functions.
 
-En cuanto al funcionamiento de la semántica, la idea es "evaluar" un Programa en cierto estado de la memoria para obtener una de tres cosas:
-
-* Bien una expresión aritmética, es decir, que la ejecución del programa sirve para devolver cierto valor para cierta
-variable de la memoria.
-* Bien una expresión Booleana, es decir, el programa puede devolver true o false a un programa de tipo expresión 
-booleana.
-* Bien un `skip`, que es un símbolo que indica que el programa ha terminado. Lo útil sería mirar en la memoria los valores
-que nos interesan, ya que la utilidad del programa ha sido cambiar los mismos.
-
-Dicha evaluación tiene la sintaxis `< Programa, Estado de la memoria >`.
-
-### **Assembly**
-Esto es un sencillo lenguaje ensamblador. La máquina a la que hacemos referencia tiene una memoria y tiene ocho registros
-a nuestra disposición. Existen comandos para sumar los números guardados en dos registros y almacenar el resultado en un 
-tercer registro, y acciones del estilo. Tenemos una memoria en la que podemos guardar datos también. Un programa escrito 
-en este ensamblador consta de una serie de _líneas_ de la forma `{ Número de la instrucción ; Instrucción }`. Con un contador
-de programa, se puede saber cuál es la instrucción que debe ejecutarse a continuación. Como funcionamiento normal, el contador de
-programa va incrementando de uno en uno según se ejecutan programas. Este comportamiento se puede alterar con ciertas operaciones.
-Las instrucciones pueden ser de varios tipos:
-
-* Operaciones aritméticas. De suma y resta de números. Estos números pueden estar almacenados en registros, o bien como inmediatos
-(es decir, datos que se pasan dentro de la misma instrucción). No hay límite en el tamaño de un número.
-* Operaciones de intercambio de datos entre registros y memoria. `LOAD` permite cargar datos desde la memoria hacia un registro,
-para poder usar un operación aritmética sobre él. `STORE` permite guardar un dato procedente de un registro, en una posición de la
-memoria.
-* Condiciones de salto. Si se cumplen ciertas condiciones, es posible alterar el sentido natural del contador de programa, y pasar a determinada línea de instrucción.
-        
+### **ObjectiveIMP**
+This language is based off the functionality of IMP and includes the ability to code in an object oriented way. It supports objects, which are variables that contain their own variables and functions (called methods).
