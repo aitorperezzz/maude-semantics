@@ -1,6 +1,6 @@
 load imp_semantics.maude .
 
-*** This file contains some tests for functionality of the language.
+*** This file contains some tests for functionality of the IMP language.
 
 *** Multiply two numbers.
 rew exec ( main 
@@ -9,33 +9,39 @@ rew exec ( main
 		'b = 10 * 'a 
 	} ) .
 
-*** Multiply two numbers calling a function.
+*** Implement the product as a standalone function.
 rew exec ( main 
 	{
 		'a = 3 ; 
 		'b = 1 ; 
-		'c = ( 'product ('a, ( 2 * 'b ) ) ) 
+		'c = 'product ('a, 2 * 'b) 
 	}
 	function 'product ('x, 'y) 
 	{
-		return ( 'x * 'y ) 
+		return 'x * 'y 
 	} ) .
+
+*** Test for the giveStack operator.
+rew giveStack [ ('x, 'y) ('a, 2 * 'b) ; function 'product ('x, 'y) { return 'x * 'y } (< 'a, 3 > < 'b, 1 >) ] .
+
+*** Test to run a function with a local stack.
+rew < return 'x * 'y, function 'product ('x, 'y) { return 'x * 'y }, < 'x,3 > < 'y,2 > > .
 
 *** When a function needs no arguments, void is passed.
 rew exec ( main 
 	{ 
-		'c = ( 'number ( void ) )  
+		'c = 'number ( void )  
 	}  
 	function 'number ( void )  
 	{ 
-		return ( 3 * 2 ) 
+		return 3 * 2 
 	} ) .
 
 *** Test recursion with the factorial function.
 rew exec ( main 
 	{   
 		'a = 5 ; 
-		'f = ( 'factorial ( 'a ) ) 
+		'f = 'factorial ( 'a ) 
 	} 
  	function 'factorial ( 'x ) 
 	{  
@@ -43,24 +49,26 @@ rew exec ( main
 		{ 
 			return 1 
 		} else { 
-			return ('x * ( 'factorial ( 'x - 1 ) ) ) 
+			return 'x * 'factorial ( 'x - 1 )  
 		} 
 	} ) .
 
-*** Test nested functions.
+*** Test multiple functions.
 rew exec ( main 
 	{ 
-		'a = 5 ; 
-		'b = 3 ;
-		'f = ( 'multiply ( 'a, 'b ) ) 
+		'a1 = 1 ; 
+		'a2 = 0 ; 
+		'b1 = 3 ;
+		'b2 = 1 ; 
+		'f = 'squaredistance ('a1, 'a2, 'b1, 'b2) 
 	} 
-	function 'multiply ('x, 'y) 
+	function 'squaredistance ('ax, 'ay, 'bx, 'by) 
 	{
-		return ( 'x * ( 'square('y) ) ) 
+		return 'square('ax - 'bx) + 'square('ay - 'by)  
 	} 
 	function 'square ('x) 
 	{
-		return ('x * 'x) 
+		return 'x * 'x 
 	} ) . 
 
 

@@ -28,8 +28,8 @@ endm
 
 mod IMP-BASIC-SEMANTICS is
 
-	*** This module gives the semantics of arithmetic and boolean operations, 
-	*** as well as the rules for the basic statements.
+	*** This module gives the semantics of arithmetic and boolean expressions, 
+	*** as well as the rules for the basic instructions.
 
 	protecting IMP-INITIAL-PARSE .
 
@@ -42,10 +42,10 @@ mod IMP-BASIC-SEMANTICS is
 	var fl : FuncList .
 	
 	*** Evaluation of a number.
-	rl [numbers] :  < n, fl, S > => n .
+	rl [arit-numbers] :  < n, fl, S > => n .
 
 	*** Evaluation of a variable.
-	rl [variables] : < v, fl, S > => S [v] .
+	rl [arit-variables] : < v, fl, S > => S [v] .
 
 
 	*** Evaluation of arithmetic expressions.
@@ -59,35 +59,55 @@ mod IMP-BASIC-SEMANTICS is
 		if < A, fl, S > => m /\ < B, fl, S > => n .
 
 
-	*** Evaluation of boolean expressions.
-	rl [true] : < true, fl, S > => true .
-	rl [false] : < false, fl, S > => false .
+	*** Evaluation of boolean values.
+	rl [bool-true] : < true, fl, S > => true .
+	rl [bool-false] : < false, fl, S > => false .
 
+	
+	*** Evaluation of boolean expressions.
+	*** Equality.
 	crl [bool-equal-true] : < A == B, fl, S > => < true, fl, S >
 		if < A, fl, S > => m /\ < B, fl, S > => m .
 	crl [bool-equal-false] : < A == B, fl, S > => < false, fl, S >
 		if < A, fl, S > => m /\  < B, fl, S > => n /\ m =/= n  .
 
+	*** Nonequality.
 	crl [bool-notequal-true] : < A != B, fl, S > => < true, fl, S >
 		if < A == B, fl, S > => < false, fl, S > .
 	crl [bool-notequal-false] : < A != B, fl, S > => < false, fl, S >
 		if < A == B, fl, S > => < true, fl, S >  .
 
+	*** Lesser than.
+	crl [bool-l-true] : < A l B, fl, S > => < true, fl, S >
+		if < A, fl, S > => m  /\  < B, fl, S > => n /\ m < n .
+	crl [bool-l-false] : < A l B, fl, S > => < false, fl, S > 
+		if < A, fl, S > => m /\ < B, fl, S > => n /\ m >= n .
+
+	*** Greater than.
+	crl [bool-g-true] : < A g B, fl, S > => < true, fl, S >
+		if < A, fl, S > => m  /\  < B, fl, S > => n /\ m > n .
+	crl [bool-g-false] : < A g B, fl, S > => < false, fl, S > 
+		if < A, fl, S > => m /\ < B, fl, S > => n /\ m <= n .
+
+	*** Lesser than or equal to.
 	crl [bool-leq-true] : < A leq B, fl, S > => < true, fl, S >
 		if < A, fl, S > => m  /\  < B, fl, S > => n /\ m <= n .
 	crl [bool-leq-false] : < A leq B, fl, S > => < false, fl, S > 
 		if < A, fl, S > => m /\ < B, fl, S > => n /\ m > n .
 
+	*** Greater than or equal to.
 	crl [bool-geq-true] : < A geq B, fl, S > => < true, fl, S >
 		if < A, fl, S > => m  /\  < B, fl, S > => n /\ m >= n .
 	crl [bool-geq-false] : < A geq B, fl, S > => < false, fl, S > 
 		if < A, fl, S > => m /\ < B, fl, S > => n /\ m < n .
 
+	*** Logical negation.
 	crl [bool-not-true] : < not b, fl, S > => < true, fl, S >
 		if < b, fl, S > => < false, fl, S > .
 	crl [bool-not-false] : < not b, fl, S > => < false, fl, S >
 		if < b, fl, S > => < true, fl, S > . 
 
+	*** Logical or.
 	crl [bool-or-true] : < b or b', fl, S > => < true, fl, S > 
 		if < b, fl, S > => < true, fl, S > /\ < b', fl, S > => < true, fl, S > .
 	crl [bool-or-true] : < b or b', fl, S > => < true, fl, S > 
@@ -97,6 +117,7 @@ mod IMP-BASIC-SEMANTICS is
 	crl [bool-or-false] : < b or b', fl, S > => < false, fl, S >
 		if < b, fl, S > => < false, fl, S > /\ < b', fl, S > => < false, fl, S > .
 
+	*** Logical and.
 	crl [bool-and-true] : < b and b', fl, S > => < true, fl, S >
 		if < b, fl, S > => < true, fl, S > /\ < b', fl, S > => < true, fl, S > .
 	crl [bool-and-false] : < b and b', fl, S > => < false, fl, S >
@@ -108,24 +129,27 @@ mod IMP-BASIC-SEMANTICS is
 
 
 	*** Semantics of statements.
+	*** Variable assignment.
 	crl [prog-assign] : < v = A, fl, S > => < skip, fl, S[v / n] >
 		if < A, fl, S > => n .
 
+	*** Composition of instructions.
 	crl [prog-comp] : < P ; P', fl, S > => < skip, fl, S' >
 		if < P, fl, S > => < skip, fl, S'' > /\
 		   < P', fl, S'' > => < skip, fl, S' > .
 
+	*** If else instruction.
 	crl [prog-if-true] : < if (b) {P} else {P'}, fl, S > => < P, fl, S >
 		if < b, fl, S > => < true, fl, S > .
 	crl [prog-if-false] : < if (b) {P} else {P'}, fl, S > => < P', fl, S >
 		if < b, fl, S > => < false, fl, S > .
 
+	*** While instruction.
 	crl [prog-while-true] : < while (b) {P}, fl, S > => < skip, fl, S' >
 		if < b, fl, S > => < true, fl, S > /\
 		   < P ; while (b) {P}, fl, S > => < skip, fl, S' > .
 	crl [prog-while-false] : < while (b) {P}, fl, S > => < skip, fl, S >
 		if < b, fl, S > => < false, fl, S > .
-
 
 endm
 
@@ -145,8 +169,8 @@ mod IMP-FUNCTIONS-SEMANTICS is
 	vars S S' S'' : Stack .
 	var P : Prog .
 
-	*** Semantics of the return operation.
-	crl [return] : < return a, fl, S > => < skip, fl, S[ 'return / n] > 
+	*** Semantics of the return instruction.
+	crl [func-return] : < return a, fl, S > => < skip, fl, S[ 'return / n] > 
 		if < a, fl, S > => n .
 
 	*** Semantics of function calls.
@@ -155,7 +179,7 @@ mod IMP-FUNCTIONS-SEMANTICS is
 		< P, fl function f (vl) {P}, S'' > => < skip, fl function f (vl) {P}, S' > .
 
 	*** Rewrite rule for giveStack when the argument is an arithmetic expression.
-	crl [givestack] : giveStack [ (v, vl) (a, al) ; fl S ] => < v, n > giveStack [ vl al ; fl S ] 
+	crl [func-givestack] : giveStack [ (v, vl) (a, al) ; fl S ] => < v, n > giveStack [ vl al ; fl S ] 
 		if < a, fl, S > => n .
 
 endm
